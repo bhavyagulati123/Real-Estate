@@ -1,41 +1,51 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db');
+require('dotenv').config()
+const express  = require('express')
+const mongoose = require('mongoose')
+const cors     = require('cors')
 
-// Connect to database
-connectDB();
+const app = express()
 
-const app = express();
-
-// Middleware
+// ─── MIDDLEWARE ───────────────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+  credentials: true,
+}))
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
-// Routes
-app.use('/api/leads', require('./routes/leads'));
-app.use('/api/properties', require('./routes/properties'));
+// ─── ROUTES ───────────────────────────────────────────────────────────────────
+app.use('/api/auth',        require('./routes/auth'))
+app.use('/api/leads',       require('./routes/leads'))
+app.use('/api/properties',  require('./routes/properties'))
+app.use('/api/deals',       require('./routes/deals'))
+app.use('/api/agents',      require('./routes/agents'))
+app.use('/api/investments', require('./routes/investments'))
+app.use('/api/wealth',      require('./routes/wealth'))
+app.use('/api/dashboard',   require('./routes/dashboard'))
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'SK Properties API is running' });
-});
+// ─── HEALTH CHECK ─────────────────────────────────────────────────────────────
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }))
 
-// Error handling middleware
+// ─── 404 ──────────────────────────────────────────────────────────────────────
+app.use((req, res) => {
+  res.status(404).json({ success: false, error: `Route ${req.method} ${req.path} not found`, code: 404 })
+})
+
+// ─── GLOBAL ERROR HANDLER ─────────────────────────────────────────────────────
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    error: err.message || 'Internal server error'
-  });
-});
+  console.error(err.stack)
+  res.status(500).json({ success: false, error: err.message || 'Internal server error', code: 500 })
+})
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✓ Server running on http://localhost:${PORT}`);
-  console.log(`✓ API ready at http://localhost:${PORT}/api`);
-});
+// ─── DB + START ───────────────────────────────────────────────────────────────
+const PORT = process.env.PORT || 5000
+
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/sk-properties')
+  .then(() => {
+    console.log('MongoDB connected')
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`))
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err.message)
+    process.exit(1)
+  })

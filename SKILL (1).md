@@ -39,7 +39,7 @@ SK Properties is a local property brokerage in Mohan Garden, Delhi. Run by a sin
 |---|---|
 | Frontend | Next.js 14 (App Router) |
 | Backend | Node.js with Express |
-| Database | MongoDB with Mongoose |
+| Database | postgress with prisma |
 | State Management | Zustand |
 | Styling | Tailwind CSS |
 | Deployment | Vercel (frontend) + Railway or Render (backend) |

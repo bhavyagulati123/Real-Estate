@@ -1,79 +1,105 @@
-const mongoose = require('mongoose');
+const mongoose = require('mongoose')
 
 const PaymentSchema = new mongoose.Schema({
   type: {
     type: String,
-    enum: ['token', 'bayana', 'partPayment', 'fullPayment', 'commission'],
-    required: true
+    enum: ['token','bayana','partPayment','fullPayment','commission'],
+    required: true,
   },
-  amount: { type: Number, required: true },
-  date: { type: Date, required: true },
-  paidBy: { type: String },
-  receivedBy: { type: String },
-  notes: { type: String },
-  verified: { type: Boolean, default: false }
-});
+  amount:     { type: Number, required: true },
+  date:       { type: Date, required: true },
+  paidBy:     { type: String, trim: true },
+  receivedBy: { type: String, trim: true },
+  notes:      { type: String, trim: true },
+  verified:   { type: Boolean, default: false },
+  createdAt:  { type: Date, default: Date.now },
+})
+
+const StageHistorySchema = new mongoose.Schema({
+  stage:     { type: String, required: true },
+  date:      { type: Date, default: Date.now },
+  notes:     { type: String, trim: true },
+})
 
 const DealSchema = new mongoose.Schema({
   // Core connections
-  propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
-  buyerLeadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
+  propertyId:   { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
+  buyerLeadId:  { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
   sellerLeadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
 
   dealType: {
     type: String,
-    enum: ['brokerage', 'inflated', 'coInvestment'],
-    required: true
+    enum: ['brokerage','inflated','coInvestment'],
+    required: true,
+    // LOCKED at creation — never changes
   },
 
   // Pipeline
   stage: {
     type: String,
-    enum: ['negotiation', 'bayana', 'papers', 'closed', 'lost'],
-    default: 'negotiation'
+    enum: ['negotiation','bayana','papers','closed','lost'],
+    default: 'negotiation',
   },
-  stageHistory: [{
-    stage: String,
-    date: { type: Date, default: Date.now },
-    notes: String
-  }],
+  stageHistory: [StageHistorySchema],
 
   // Key dates
   bayanaDate: { type: Date },
   papersDate: { type: Date },
   closedDate: { type: Date },
-  lostDate: { type: Date },
-  lostReason: { type: String },
+  lostDate:   { type: Date },
+  lostReason: { type: String, trim: true },
 
-  // Money flow
-  agreedPrice: { type: Number, required: true },
-  floorPrice: { type: Number },
-  margin: { type: Number },
-  // Auto-calculated: agreedPrice - floorPrice
+  // Money
+  agreedPrice:          { type: Number, required: true },
+  floorPrice:           { type: Number }, // LOCKED at creation from property.floorPrice
+  margin:               { type: Number }, // auto: agreedPrice - floorPrice
+  commissionRate:       { type: Number }, // percentage, usually 1
+  expectedCommission:   { type: Number }, // agreedPrice * commissionRate / 100
+  actualCommission:     { type: Number, default: 0 },
 
-  commissionRate: { type: Number },
-  expectedCommission: { type: Number },
-  actualCommission: { type: Number },
-
-  // Payment tracking
-  payments: [PaymentSchema],
-  totalPaid: { type: Number, default: 0 },
+  // Payment flow tracker
+  payments:        [PaymentSchema],
+  totalPaid:       { type: Number, default: 0 },
   remainingAmount: { type: Number },
 
   // Agent splits
-  buyerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
-  sellerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
+  buyerAgentId:         { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
+  sellerAgentId:        { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
   commissionSplitPercent: { type: Number },
 
   // Risk
-  riskLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
-  riskNotes: { type: String },
+  riskLevel: { type: String, enum: ['low','medium','high'], default: 'low' },
+  riskNotes: { type: String, trim: true },
 
-  notes: { type: String },
+  notes: { type: String, trim: true },
+
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
-});
+  updatedAt: { type: Date, default: Date.now },
+})
 
-module.exports = mongoose.model('Deal', DealSchema);
+DealSchema.pre('save', function (next) {
+  this.updatedAt = new Date()
+
+  // Recalculate derived fields
+  if (this.agreedPrice && this.floorPrice) {
+    this.margin = this.agreedPrice - this.floorPrice
+  }
+  if (this.agreedPrice && this.commissionRate) {
+    this.expectedCommission = Math.round(this.agreedPrice * this.commissionRate / 100)
+  }
+
+  // Recalculate totalPaid from payments array (exclude commission)
+  const nonCommission = this.payments.filter(p => p.type !== 'commission')
+  this.totalPaid = nonCommission.reduce((sum, p) => sum + p.amount, 0)
+  this.remainingAmount = this.agreedPrice - this.totalPaid
+
+  next()
+})
+
+DealSchema.index({ stage: 1 })
+DealSchema.index({ riskLevel: 1 })
+DealSchema.index({ isDeleted: 1 })
+
+module.exports = mongoose.model('Deal', DealSchema)
