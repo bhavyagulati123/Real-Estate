@@ -1,75 +1,79 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const { DEAL_STAGES, DEAL_TYPES, PAYMENT_TYPES, RISK_LEVELS } = require('../utils/constants')
-
-const PaymentSchema = new mongoose.Schema(
-  {
-    type: { type: String, enum: PAYMENT_TYPES, required: true },
-    amount: { type: Number, required: true, min: 0 },
-    date: { type: Date, required: true },
-    paidBy: { type: String, trim: true },
-    receivedBy: { type: String, trim: true },
-    notes: { type: String, trim: true },
-    verified: { type: Boolean, default: false }
+const PaymentSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['token', 'bayana', 'partPayment', 'fullPayment', 'commission'],
+    required: true
   },
-  { _id: true }
-)
-
-const StageHistorySchema = new mongoose.Schema(
-  {
-    stage: { type: String, enum: DEAL_STAGES },
-    date: { type: Date, default: Date.now },
-    notes: { type: String, trim: true }
-  },
-  { _id: false }
-)
+  amount: { type: Number, required: true },
+  date: { type: Date, required: true },
+  paidBy: { type: String },
+  receivedBy: { type: String },
+  notes: { type: String },
+  verified: { type: Boolean, default: false }
+});
 
 const DealSchema = new mongoose.Schema({
+  // Core connections
   propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
   buyerLeadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
   sellerLeadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
-  dealType: { type: String, enum: DEAL_TYPES, required: true },
-  stage: { type: String, enum: DEAL_STAGES, default: 'negotiation' },
-  stageHistory: [StageHistorySchema],
+
+  dealType: {
+    type: String,
+    enum: ['brokerage', 'inflated', 'coInvestment'],
+    required: true
+  },
+
+  // Pipeline
+  stage: {
+    type: String,
+    enum: ['negotiation', 'bayana', 'papers', 'closed', 'lost'],
+    default: 'negotiation'
+  },
+  stageHistory: [{
+    stage: String,
+    date: { type: Date, default: Date.now },
+    notes: String
+  }],
+
+  // Key dates
   bayanaDate: { type: Date },
   papersDate: { type: Date },
   closedDate: { type: Date },
   lostDate: { type: Date },
-  lostReason: { type: String, trim: true },
-  agreedPrice: { type: Number, required: true, min: 0 },
-  floorPrice: { type: Number, min: 0 },
-  margin: { type: Number, min: 0 },
-  commissionRate: { type: Number, min: 0 },
-  expectedCommission: { type: Number, min: 0 },
-  actualCommission: { type: Number, min: 0 },
+  lostReason: { type: String },
+
+  // Money flow
+  agreedPrice: { type: Number, required: true },
+  floorPrice: { type: Number },
+  margin: { type: Number },
+  // Auto-calculated: agreedPrice - floorPrice
+
+  commissionRate: { type: Number },
+  expectedCommission: { type: Number },
+  actualCommission: { type: Number },
+
+  // Payment tracking
   payments: [PaymentSchema],
   totalPaid: { type: Number, default: 0 },
-  remainingAmount: { type: Number, default: 0 },
+  remainingAmount: { type: Number },
+
+  // Agent splits
   buyerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
   sellerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
-  commissionSplitPercent: { type: Number, min: 0, max: 100 },
-  riskLevel: { type: String, enum: RISK_LEVELS, default: 'low' },
-  riskNotes: { type: String, trim: true },
-  notes: { type: String, trim: true },
+  commissionSplitPercent: { type: Number },
+
+  // Risk
+  riskLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
+  riskNotes: { type: String },
+
+  notes: { type: String },
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-})
+});
 
-DealSchema.pre('save', function computeTotals(next) {
-  const nonCommissionPayments = this.payments.filter((payment) => payment.type !== 'commission')
-  this.totalPaid = nonCommissionPayments.reduce((total, payment) => total + payment.amount, 0)
-  this.remainingAmount = Math.max((this.agreedPrice || 0) - this.totalPaid, 0)
-
-  if (this.floorPrice && this.stage !== 'bayana' && this.stage !== 'papers' && this.stage !== 'closed') {
-    this.margin = Math.max((this.agreedPrice || 0) - this.floorPrice, 0)
-  }
-
-  this.updatedAt = new Date()
-  next()
-})
-
-DealSchema.index({ stage: 1, dealType: 1, isDeleted: 1 })
-
-module.exports = mongoose.models.Deal || mongoose.model('Deal', DealSchema)
+module.exports = mongoose.model('Deal', DealSchema);

@@ -1,37 +1,59 @@
-const mongoose = require('mongoose')
-
-const { BLOCKS, CONFIGURATIONS, DEAL_TYPES, OWNERSHIP_STATUS, PROPERTY_TYPES } = require('../utils/constants')
+const mongoose = require('mongoose');
 
 const PropertySchema = new mongoose.Schema({
-  title: { type: String, required: true, trim: true },
-  location: { type: String, required: true, trim: true },
-  block: { type: String, enum: BLOCKS },
-  propertyType: { type: String, enum: PROPERTY_TYPES, required: true },
-  configuration: { type: String, enum: CONFIGURATIONS, default: 'NA' },
-  size: { type: Number, min: 0 },
-  buildingAge: { type: String, trim: true },
+  title: { type: String, required: true },
+  // Human-readable e.g. "2BHK Floor, Block C, Mohan Garden"
+
+  location: { type: String, required: true },
+  block: {
+    type: String,
+    enum: ['A', 'B', 'C', 'D', 'E', 'F', 'other']
+  },
+  propertyType: {
+    type: String,
+    enum: ['residential', 'floor', 'office', 'rootFloor', 'fullBuilding', 'plot', 'commercial'],
+    required: true
+  },
+  configuration: {
+    type: String,
+    enum: ['1BHK', '2BHK', '3BHK', '4BHK', 'villa', 'plot', 'NA'],
+    default: 'NA'
+  },
+  size: { type: Number },
+  buildingAge: { type: String },
   buildingCredibility: { type: Number, min: 1, max: 5 },
-  floorPrice: { type: Number, min: 0 },
-  askingPrice: { type: Number, min: 0 },
-  listedPrice: { type: Number, min: 0 },
-  dealType: { type: String, enum: DEAL_TYPES, required: true },
-  ownershipStatus: { type: String, enum: OWNERSHIP_STATUS, default: 'available' },
+
+  // Pricing
+  floorPrice: { type: Number },
+  // Seller's actual minimum — PRIVATE
+  askingPrice: { type: Number },
+  // What seller is publicly asking
+  listedPrice: { type: Number },
+  // What Father shows buyers
+
+  dealType: {
+    type: String,
+    enum: ['brokerage', 'inflated', 'coInvestment'],
+    required: true
+  },
+
+  ownershipStatus: {
+    type: String,
+    enum: ['available', 'underNegotiation', 'sold', 'ownerOwned'],
+    default: 'available'
+  },
+
   sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
   sourceAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
+
   images: [{ type: String }],
   documents: [{ type: String }],
-  notes: { type: String, trim: true },
+  notes: { type: String },
+
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-})
+});
 
-PropertySchema.pre('save', function updateTimestamp(next) {
-  this.updatedAt = new Date()
-  next()
-})
-
-PropertySchema.index({ ownershipStatus: 1, location: 1, isDeleted: 1 })
-
-module.exports = mongoose.models.Property || mongoose.model('Property', PropertySchema)
+module.exports = mongoose.model('Property', PropertySchema);

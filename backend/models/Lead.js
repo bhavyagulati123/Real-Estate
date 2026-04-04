@@ -1,48 +1,76 @@
-const mongoose = require('mongoose')
-
-const { BLOCKS, CONFIGURATIONS, LEAD_SOURCES, LEAD_STATUSES, PROPERTY_TYPES } = require('../utils/constants')
-
-const InteractionSchema = new mongoose.Schema(
-  {
-    note: { type: String, required: true },
-    stage: { type: String },
-    createdAt: { type: Date, default: Date.now }
-  },
-  { _id: false }
-)
+const mongoose = require('mongoose');
 
 const LeadSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  phone: { type: String, required: true, trim: true },
-  alternatePhone: { type: String, trim: true },
-  source: { type: String, enum: LEAD_SOURCES, required: true },
+  // Identity
+  name: { type: String, required: true },
+  phone: { type: String, required: true },
+  // String not Number — preserve +91, leading zeros
+  alternatePhone: { type: String },
+  source: {
+    type: String,
+    enum: ['call', 'whatsapp', 'agent', 'walkin', 'website', 'referral'],
+    required: true
+  },
   sourceAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
+  // Which external agent brought this lead to us
+
   leadType: { type: String, enum: ['buyer', 'seller'], required: true },
-  budget: { type: Number, min: 0 },
-  location: { type: String, trim: true },
-  block: { type: String, enum: BLOCKS },
-  propertyType: { type: String, enum: PROPERTY_TYPES },
-  configuration: { type: String, enum: CONFIGURATIONS, default: 'NA' },
-  size: { type: Number, min: 0 },
-  buildingAge: { type: String, trim: true },
+
+  // What they want (buyer) / What they have (seller)
+  budget: { type: Number },
+  // In rupees — max budget for buyer, minimum acceptable for seller
+  location: { type: String },
+  // Area or lane in Mohan Garden
+  block: { type: String, enum: ['A', 'B', 'C', 'D', 'E', 'F', 'other'] },
+  // Block preference — price varies significantly by block
+  propertyType: {
+    type: String,
+    enum: ['residential', 'floor', 'office', 'rootFloor', 'fullBuilding', 'plot', 'commercial']
+  },
+  configuration: {
+    type: String,
+    enum: ['1BHK', '2BHK', '3BHK', '4BHK', 'villa', 'plot', 'NA'],
+    default: 'NA'
+  },
+  size: { type: Number },
+  // Square yards
+  buildingAge: { type: String },
+  // e.g. "5 years", "new construction", "15+ years"
+
+  // Qualification
   credibilityScore: { type: Number, min: 1, max: 5 },
-  status: { type: String, enum: LEAD_STATUSES, default: 'new' },
+  // Father's gut judgment — 1=very doubtful, 3=seems genuine, 5=highly credible
+
+  // Pipeline
+  status: {
+    type: String,
+    enum: [
+      'new',
+      'contacted',
+      'interested',
+      'visit',
+      'negotiation',
+      'bayana',
+      'papers',
+      'closed',
+      'lost'
+    ],
+    default: 'new'
+  },
+
+  // Follow-up engine
   followUpDate: { type: Date },
-  followUpNotes: { type: String, trim: true },
-  notes: { type: String, trim: true },
-  interactionHistory: [InteractionSchema],
+  // System queries this daily
+  followUpNotes: { type: String },
+  // What to discuss on next call
+
+  notes: { type: String },
+  // General notes
+
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-})
+});
 
-LeadSchema.pre('save', function updateTimestamp(next) {
-  this.updatedAt = new Date()
-  next()
-})
-
-LeadSchema.index({ followUpDate: 1, status: 1, isDeleted: 1 })
-LeadSchema.index({ location: 1, leadType: 1, propertyType: 1 })
-
-module.exports = mongoose.models.Lead || mongoose.model('Lead', LeadSchema)
+module.exports = mongoose.model('Lead', LeadSchema);

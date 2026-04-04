@@ -1,43 +1,38 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const CoInvestorSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    phone: { type: String, trim: true },
-    amountInvested: { type: Number, required: true, min: 0 },
-    sharePercent: { type: Number, required: true, min: 0, max: 100 },
-    notes: { type: String, trim: true }
-  },
-  { _id: false }
-)
+const CoInvestorSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  phone: { type: String },
+  amountInvested: { type: Number, required: true },
+  sharePercent: { type: Number, required: true },
+  notes: { type: String }
+});
 
 const InvestmentSchema = new mongoose.Schema({
   propertyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Property', required: true },
-  purchasePrice: { type: Number, required: true, min: 0 },
+
+  purchasePrice: { type: Number, required: true },
   purchaseDate: { type: Date, required: true },
-  mySharePercent: { type: Number, required: true, min: 0, max: 100 },
-  myAmount: { type: Number, min: 0 },
+  mySharePercent: { type: Number, required: true },
+  myAmount: { type: Number },
+  // Auto-calculated: purchasePrice x mySharePercent / 100
+
   coInvestors: [CoInvestorSchema],
-  holdingCosts: { type: Number, default: 0, min: 0 },
-  targetSalePrice: { type: Number, min: 0 },
-  actualSalePrice: { type: Number, min: 0 },
-  myProfit: { type: Number, min: 0 },
+
+  holdingCosts: { type: Number, default: 0 },
+  // Maintenance, tax, loan interest while holding
+
+  targetSalePrice: { type: Number },
+  actualSalePrice: { type: Number },
+
+  myProfit: { type: Number },
+  // Auto-calculated on sale
+
   status: { type: String, enum: ['holding', 'sold'], default: 'holding' },
   saleDate: { type: Date },
-  notes: { type: String, trim: true },
+
+  notes: { type: String },
   createdAt: { type: Date, default: Date.now }
-})
+});
 
-InvestmentSchema.pre('save', function computeInvestmentValues(next) {
-  this.myAmount = Math.round((this.purchasePrice * this.mySharePercent) / 100)
-
-  if (this.status === 'sold' && this.actualSalePrice) {
-    const mySaleValue = Math.round((this.actualSalePrice * this.mySharePercent) / 100)
-    const myHoldingCost = Math.round((this.holdingCosts * this.mySharePercent) / 100)
-    this.myProfit = mySaleValue - this.myAmount - myHoldingCost
-  }
-
-  next()
-})
-
-module.exports = mongoose.models.Investment || mongoose.model('Investment', InvestmentSchema)
+module.exports = mongoose.model('Investment', InvestmentSchema);
