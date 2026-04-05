@@ -1,18 +1,18 @@
 'use client'
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Search, Phone, MessageCircle, Building2 } from 'lucide-react'
-import { useProperties, usePropertyMatches } from '@/hooks/useData'
-import { Skeleton, StatusBadge, Button, EmptyState, Select, Sheet, KpiCard } from '@/components/ui'
-import { Avatar } from '@/components/ui'
+import { Plus, Search, Building2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useProperties } from '@/hooks/useData'
+import { Skeleton, StatusBadge, Button, EmptyState } from '@/components/ui'
 import { useUIStore } from '@/store/useUIStore'
-import { formatRupees, formatDate, BLOCKS } from '@/lib/utils'
+import { formatRupees } from '@/lib/utils'
 import { staggerContainer, staggerItem } from '@/lib/motion'
 
 export default function PropertiesPage() {
-  const { propertiesFilter, setPropertiesFilter, openAddProperty, openAddDeal } = useUIStore()
+  const { propertiesFilter, setPropertiesFilter, openAddProperty } = useUIStore()
   const [search, setSearch]           = useState('')
-  const [selectedId, setSelectedId]   = useState<string | null>(null)
+  const router = useRouter()
 
   const filters = { ...propertiesFilter, search: search || undefined, limit: 50 }
   const { data, isLoading } = useProperties(filters)
@@ -71,7 +71,7 @@ export default function PropertiesPage() {
             <motion.div key={prop._id} variants={staggerItem}>
               <div
                 className="bg-white rounded-xl border border-zinc-200 p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
-                onClick={() => setSelectedId(selectedId === prop._id ? null : prop._id)}
+                onClick={() => router.push(`/properties/${prop._id}`)}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
@@ -91,71 +91,11 @@ export default function PropertiesPage() {
                     {prop.floorPrice  && <p className="text-xs text-zinc-400">floor {formatRupees(prop.floorPrice)}</p>}
                   </div>
                 </div>
-
-                {/* Expand: seller info + matched buyers */}
-                {selectedId === prop._id && (
-                  <div className="mt-3 pt-3 border-t border-zinc-100 space-y-3">
-                    {prop.sellerId && (
-                      <div className="flex items-center gap-2">
-                        <Avatar name={prop.sellerId.name} size="sm" />
-                        <div>
-                          <p className="text-xs font-medium text-zinc-900">{prop.sellerId.name}</p>
-                          <p className="text-xs text-zinc-500">Seller</p>
-                        </div>
-                        <div className="ml-auto flex gap-1">
-                          <a href={`tel:${prop.sellerId.phone}`} className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400"><Phone className="w-3.5 h-3.5" /></a>
-                          <a href={`https://wa.me/${prop.sellerId.phone?.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400"><MessageCircle className="w-3.5 h-3.5" /></a>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <Button size="sm" onClick={() => openAddDeal(prop._id)}>Create deal</Button>
-                    </div>
-                    <MatchedBuyers propertyId={prop._id} />
-                  </div>
-                )}
               </div>
             </motion.div>
           ))}
         </motion.div>
       )}
-    </div>
-  )
-}
-
-function MatchedBuyers({ propertyId }: { propertyId: string }) {
-  const { data, isLoading } = usePropertyMatches(propertyId)
-  const matches = data?.data?.matches || []
-  const { openAddDeal } = useUIStore()
-
-  if (isLoading) return <Skeleton className="h-10" />
-  if (matches.length === 0) return <p className="text-xs text-zinc-400">No matching buyers in your leads</p>
-
-  return (
-    <div>
-      <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest mb-2">
-        {matches.length} matching buyer{matches.length > 1 ? 's' : ''}
-      </p>
-      <div className="space-y-2">
-        {matches.map((lead: any) => (
-          <div key={lead._id} className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
-            <Avatar name={lead.name} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-zinc-900">{lead.name}</p>
-              <p className="text-xs text-zinc-500">{formatRupees(lead.budget)} budget</p>
-            </div>
-            <div className="flex gap-1">
-              <a href={`tel:${lead.phone}`} className="p-1.5 rounded hover:bg-blue-100 text-blue-600"><Phone className="w-3.5 h-3.5" /></a>
-              <button
-                onClick={() => openAddDeal(propertyId, lead._id)}
-                className="text-xs px-2 py-1 rounded bg-zinc-900 text-white hover:opacity-90"
-              >
-                Deal
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

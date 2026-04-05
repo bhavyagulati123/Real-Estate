@@ -274,9 +274,17 @@ router.put('/:id/close', auth, async (req, res) => {
       Property.findByIdAndUpdate(deal.propertyId, { ownershipStatus: 'sold' }),
       Lead.findByIdAndUpdate(deal.buyerLeadId,  { status: 'closed' }),
       Lead.findByIdAndUpdate(deal.sellerLeadId, { status: 'closed' }),
-      // Update agent stats
-      deal.buyerAgentId  && Agent.findByIdAndUpdate(deal.buyerAgentId,  { $inc: { totalDeals: 1 } }),
-      deal.sellerAgentId && Agent.findByIdAndUpdate(deal.sellerAgentId, { $inc: { totalDeals: 1 } }),
+      // Update agent stats — totalDeals + commission split
+      ...(() => {
+        const total  = deal.actualCommission || 0
+        const split  = deal.commissionSplitPercent  // buyer agent's % share
+        const buyerShare  = split != null ? Math.round(total * split / 100)         : total
+        const sellerShare = split != null ? Math.round(total * (100 - split) / 100) : 0
+        return [
+          deal.buyerAgentId  && Agent.findByIdAndUpdate(deal.buyerAgentId,  { $inc: { totalDeals: 1, totalCommission: buyerShare  } }),
+          deal.sellerAgentId && Agent.findByIdAndUpdate(deal.sellerAgentId, { $inc: { totalDeals: 1, totalCommission: sellerShare } }),
+        ]
+      })(),
     ])
 
     res.json({ success: true, data: deal, message: 'Deal closed' })

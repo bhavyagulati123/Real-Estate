@@ -61,7 +61,7 @@ export function useLeads(filters: LeadsFilter = {}) {
     if (v !== undefined && v !== '' && v !== false) params.set(k, String(v))
   })
   return useQuery({
-    queryKey: queryKeys.leads(filters),
+    queryKey: queryKeys.leads(filters as Record<string, unknown>),
     queryFn:  () => api.get<ApiResponse<Lead[]>>(`/api/leads?${params}`),
   })
 }

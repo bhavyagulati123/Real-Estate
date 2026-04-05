@@ -2,14 +2,19 @@
 // app/(dashboard)/investments/page.tsx
 
 'use client'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useInvestments } from '@/hooks/useData'
-import { Skeleton, StatusBadge, Button, EmptyState, KpiCard } from '@/components/ui'
+import { Skeleton, StatusBadge, Button, EmptyState, KpiCard, Sheet } from '@/components/ui'
 import { formatRupees, formatDate } from '@/lib/utils'
 import { TrendingUp, Plus } from 'lucide-react'
+import { AddInvestmentForm } from '@/components/forms'
 
 export default function InvestmentsPage() {
+  const router = useRouter()
   const { data, isLoading } = useInvestments()
   const investments = data?.data || []
+  const [addOpen, setAddOpen] = useState(false)
 
   const holding    = investments.filter((i: any) => i.status === 'holding')
   const sold       = investments.filter((i: any) => i.status === 'sold')
@@ -18,7 +23,10 @@ export default function InvestmentsPage() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-3xl">
-      <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 mb-5">Investments</h1>
+      <div className="flex items-center justify-between mb-5">
+        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Investments</h1>
+        <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" /> Add</Button>
+      </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <KpiCard label="Holding"        value={holding.length}         sub={formatRupees(totalValue)} />
@@ -37,7 +45,7 @@ export default function InvestmentsPage() {
             const targetGain  = inv.targetSalePrice ? inv.targetSalePrice - inv.purchasePrice : null
 
             return (
-              <div key={inv._id} className="bg-white rounded-xl border border-zinc-200 p-4">
+              <div key={inv._id} onClick={() => router.push(`/investments/${inv._id}`)} className="bg-white rounded-xl border border-zinc-200 p-4 cursor-pointer hover:border-zinc-300 hover:shadow-sm transition-all">
                 <div className="flex items-start justify-between gap-3 mb-2">
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
@@ -79,6 +87,10 @@ export default function InvestmentsPage() {
           })}
         </div>
       )}
+
+      <Sheet open={addOpen} onClose={() => setAddOpen(false)} title="Add investment">
+        <AddInvestmentForm onClose={() => setAddOpen(false)} />
+      </Sheet>
     </div>
   )
 }

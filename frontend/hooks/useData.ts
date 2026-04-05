@@ -269,6 +269,14 @@ export function useEditAgent(id: string) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // INVESTMENTS
 // ═══════════════════════════════════════════════════════════════════════════════
+export function useInvestment(id: string) {
+  return useQuery({
+    queryKey: queryKeys.investment(id),
+    queryFn:  () => api.get<ApiRes<Investment>>(`/api/investments/${id}`),
+    enabled:  !!id,
+  })
+}
+
 export function useInvestments(filters: Record<string, unknown> = {}) {
   const params = new URLSearchParams()
   Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, String(v)) })

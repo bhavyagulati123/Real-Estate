@@ -2,7 +2,7 @@
 import { motion } from 'framer-motion'
 import { Search, Plus, SlidersHorizontal, X } from 'lucide-react'
 import { useLeads } from '@/hooks/useLeads'
-import { LeadCard } from '@/components/LeadCard'
+import { LeadListItem } from '@/components/LeadListItem'
 import { Skeleton, Button, EmptyState, Select } from '@/components/ui'
 import { useUIStore } from '@/store/useUIStore'
 import { staggerContainer, staggerItem } from '@/lib/motion'
@@ -99,7 +99,7 @@ export default function LeadsPage() {
         <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
           {leads.map(lead => (
             <motion.div key={lead._id} variants={staggerItem}>
-              <LeadCard lead={lead} />
+              <LeadListItem lead={lead} />
             </motion.div>
           ))}
         </motion.div>

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Plus, AlertTriangle, DollarSign } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { useDeals } from '@/hooks/useData'
 import { StatusBadge, Skeleton, Button, EmptyState } from '@/components/ui'
 import { useUIStore } from '@/store/useUIStore'
@@ -12,6 +13,7 @@ import { DEAL_STAGES } from '@/lib/utils'
 export default function DealsPage() {
   const { openAddDeal, openAddPayment } = useUIStore()
   const [stageFilter, setStageFilter]   = useState('')
+  const router = useRouter()
 
   const { data, isLoading } = useDeals(stageFilter ? { stage: stageFilter } : {})
   const deals = data?.data || []
@@ -21,7 +23,7 @@ export default function DealsPage() {
 
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">Deals</h1>
-        <Button size="sm" onClick={openAddDeal}><Plus className="w-4 h-4" /> New deal</Button>
+        <Button size="sm" onClick={() => openAddDeal()}><Plus className="w-4 h-4" /> New deal</Button>
       </div>
 
       {/* Stage filter tabs */}
@@ -49,7 +51,7 @@ export default function DealsPage() {
         <EmptyState
           title="No deals yet"
           description="Create a deal when a buyer is interested in a property"
-          action={<Button onClick={openAddDeal}><Plus className="w-4 h-4" /> New deal</Button>}
+          action={<Button onClick={() => openAddDeal()}><Plus className="w-4 h-4" /> New deal</Button>}
         />
       ) : (
         <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
@@ -61,7 +63,10 @@ export default function DealsPage() {
 
             return (
               <motion.div key={deal._id} variants={staggerItem}>
-                <div className="bg-white rounded-xl border border-zinc-200 p-4">
+                <div
+                  className="bg-white rounded-xl border border-zinc-200 p-4 cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+                  onClick={() => router.push(`/deals/${deal._id}`)}
+                >
 
                   {/* Top row */}
                   <div className="flex items-start justify-between gap-3 mb-3">
@@ -122,7 +127,7 @@ export default function DealsPage() {
                   {!['closed','lost'].includes(deal.stage) && (
                     <div className="flex gap-2 pt-1 border-t border-zinc-100">
                       <button
-                        onClick={() => openAddPayment(deal._id)}
+                        onClick={(e) => { e.stopPropagation(); openAddPayment(deal._id) }}
                         className="flex items-center gap-1.5 text-xs text-zinc-600 hover:text-zinc-900 transition-colors py-1"
                       >
                         <DollarSign className="w-3.5 h-3.5" /> Add payment

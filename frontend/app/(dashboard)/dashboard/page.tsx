@@ -2,7 +2,7 @@
 import { motion } from 'framer-motion'
 import { Plus, AlertCircle, Users, Briefcase } from 'lucide-react'
 import { useDashboard } from '@/hooks/useData'
-import { LeadCard } from '@/components/LeadCard'
+import { LeadListItem } from '@/components/LeadListItem'
 import { KpiCard, Skeleton, EmptyState, Button } from '@/components/ui'
 import { useUIStore } from '@/store/useUIStore'
 import { formatRupees } from '@/lib/utils'
@@ -66,7 +66,7 @@ export default function DashboardPage() {
           <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
             {d!.overdue.map(lead => (
               <motion.div key={lead._id} variants={staggerItem}>
-                <LeadCard lead={lead} compact />
+                <LeadListItem lead={lead} />
               </motion.div>
             ))}
           </motion.div>
@@ -80,7 +80,7 @@ export default function DashboardPage() {
           <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
             {d!.dueToday.map(lead => (
               <motion.div key={lead._id} variants={staggerItem}>
-                <LeadCard lead={lead} compact />
+                <LeadListItem lead={lead} />
               </motion.div>
             ))}
           </motion.div>
@@ -92,7 +92,7 @@ export default function DashboardPage() {
         <section className="mb-6">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-zinc-900">Active deals ({d!.activeDeals.length})</h2>
-            <Button size="sm" variant="ghost" onClick={openAddDeal}>+ Deal</Button>
+            <Button size="sm" variant="ghost" onClick={() => openAddDeal()}>+ Deal</Button>
           </div>
           <div className="space-y-2">
             {d!.activeDeals.map(deal => {

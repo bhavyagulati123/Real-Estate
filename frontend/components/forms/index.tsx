@@ -1,12 +1,14 @@
 'use client'
 import { useForm } from 'react-hook-form'
+import { useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Input, Label, Select, Textarea, Button, ErrorMsg } from '@/components/ui'
 import { useAddLead, useEditLead, useLead, useLeads } from '@/hooks/useLeads'
-import { useAddProperty, useEditProperty, useProperties, useCreateDeal, useAddAgent, useAddPayment, useAgents as useAgentsData } from '@/hooks/useData'
+import { useAddProperty, useEditProperty, useProperties, useCreateDeal, useAddAgent, useAddPayment, useAddInvestment, useAgents as useAgentsData } from '@/hooks/useData'
 import { useUIStore } from '@/store/useUIStore'
 import { LEAD_SOURCES, PROPERTY_TYPES, CONFIGURATIONS, BLOCKS, DEAL_TYPES, PAYMENT_TYPES, RISK_LEVELS } from '@/lib/utils'
+import { useToast } from '@/components/ToastProvider'
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ADD / EDIT LEAD FORM
@@ -37,11 +39,13 @@ export function AddLeadForm({ onClose }: { onClose: () => void }) {
   const editLead = useEditLead(editLeadId || '')
   const { data: agentsData } = useAgentsData()
   const agents = agentsData?.data || []
+  const toast = useToast()
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<LeadForm>({
     resolver: zodResolver(leadSchema),
     defaultValues: isEdit && existing?.data ? {
       ...existing.data,
+      source: existing.data.source as LeadForm['source'],
       sourceAgentId: (existing.data.sourceAgentId as any)?._id || '',
     } : { leadType: 'buyer', source: 'call' },
   })
@@ -55,8 +59,11 @@ export function AddLeadForm({ onClose }: { onClose: () => void }) {
       } else {
         await addLead.mutateAsync(data as any)
       }
+      toast.success(isEdit ? 'Lead updated' : 'Lead added')
       onClose()
-    } catch { /* handled by mutation */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   const isPending = addLead.isPending || editLead.isPending
@@ -196,6 +203,7 @@ export function AddPropertyForm({ onClose }: { onClose: () => void }) {
   const { data: agentsData }  = useAgentsData()
   const sellers = sellersData?.data || []
   const agents  = agentsData?.data  || []
+  const toast = useToast()
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<PropertyForm>({
     resolver: zodResolver(propertySchema),
@@ -208,8 +216,11 @@ export function AddPropertyForm({ onClose }: { onClose: () => void }) {
     try {
       if (isEdit) await editProp.mutateAsync(data as any)
       else        await addProp.mutateAsync(data as any)
+      toast.success(isEdit ? 'Property updated' : 'Property added')
       onClose()
-    } catch { /* handled */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   const isPending = addProp.isPending || editProp.isPending
@@ -359,6 +370,7 @@ export function AddDealForm({ onClose }: { onClose: () => void }) {
   const { data: buyersData }     = useLeads({ leadType: 'buyer', limit: 100 })
   const { data: sellersData }    = useLeads({ leadType: 'seller', limit: 100 })
   const { data: agentsData }     = useAgentsData()
+  const toast = useToast()
 
   const properties = propertiesData?.data || []
   const buyers     = buyersData?.data     || []
@@ -379,8 +391,11 @@ export function AddDealForm({ onClose }: { onClose: () => void }) {
   async function onSubmit(data: DealForm) {
     try {
       await createDeal.mutateAsync(data)
+      toast.success('Deal created')
       onClose()
-    } catch { /* handled */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   return (
@@ -484,6 +499,7 @@ type AgentForm = z.infer<typeof agentSchema>
 
 export function AddAgentForm({ onClose }: { onClose: () => void }) {
   const addAgent = useAddAgent()
+  const toast = useToast()
   const { register, handleSubmit, formState: { errors } } = useForm<AgentForm>({
     resolver: zodResolver(agentSchema),
     defaultValues: { type: 'external' },
@@ -492,8 +508,11 @@ export function AddAgentForm({ onClose }: { onClose: () => void }) {
   async function onSubmit(data: AgentForm) {
     try {
       await addAgent.mutateAsync(data)
+      toast.success('Agent added')
       onClose()
-    } catch { /* handled */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   return (
@@ -543,6 +562,7 @@ type PaymentForm = z.infer<typeof paymentSchema>
 
 export function AddPaymentForm({ dealId, onClose }: { dealId: string; onClose: () => void }) {
   const addPayment = useAddPayment(dealId)
+  const toast = useToast()
   const { register, handleSubmit, watch, formState: { errors } } = useForm<PaymentForm>({
     resolver: zodResolver(paymentSchema),
     defaultValues: { type: 'token', date: new Date().toISOString().split('T')[0] },
@@ -553,8 +573,11 @@ export function AddPaymentForm({ dealId, onClose }: { dealId: string; onClose: (
   async function onSubmit(data: PaymentForm) {
     try {
       await addPayment.mutateAsync(data)
+      toast.success('Payment recorded')
       onClose()
-    } catch { /* handled */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   return (
@@ -602,6 +625,159 @@ export function AddPaymentForm({ dealId, onClose }: { dealId: string; onClose: (
 
       <div className="flex gap-2 pt-2">
         <Button type="submit" loading={addPayment.isPending} className="flex-1">Record payment</Button>
+        <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
+      </div>
+    </form>
+  )
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// ADD INVESTMENT FORM
+// ═════════════════════════════════════════════════════════════════════════════
+const coInvestorSchema = z.object({
+  name:           z.string().min(1, 'Required'),
+  phone:          z.string().optional(),
+  amountInvested: z.coerce.number().min(1, 'Required'),
+  sharePercent:   z.coerce.number().min(1, 'Required'),
+})
+
+const investmentSchema = z.object({
+  propertyId:      z.string().min(1, 'Required'),
+  purchasePrice:   z.coerce.number().min(1, 'Required'),
+  purchaseDate:    z.string().min(1, 'Required'),
+  mySharePercent:  z.coerce.number().min(1, 'Required').max(100, 'Max 100'),
+  holdingCosts:    z.coerce.number().optional(),
+  targetSalePrice: z.coerce.number().optional(),
+  notes:           z.string().optional(),
+  coInvestors:     z.array(coInvestorSchema).optional(),
+})
+type InvestmentForm = z.infer<typeof investmentSchema>
+
+export function AddInvestmentForm({ onClose }: { onClose: () => void }) {
+  const toast = useToast()
+  const addInvestment = useAddInvestment()
+  const { data: propertiesData } = useProperties({ limit: 200 })
+  const properties = propertiesData?.data || []
+
+  const { register, control, handleSubmit, formState: { errors } } = useForm<InvestmentForm>({
+    resolver: zodResolver(investmentSchema),
+    defaultValues: {
+      purchaseDate: new Date().toISOString().split('T')[0],
+      mySharePercent: 100,
+      holdingCosts: 0,
+      coInvestors: [],
+    },
+  })
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'coInvestors' })
+
+  async function onSubmit(data: InvestmentForm) {
+    try {
+      await addInvestment.mutateAsync({
+        ...data,
+        coInvestors: data.coInvestors?.filter((c) => c.name?.trim()) ?? [],
+      })
+      toast.success('Investment added')
+      onClose()
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <Label>Property *</Label>
+        <Select {...register('propertyId')}>
+          <option value="">Select property...</option>
+          {properties.map((p: any) => (
+            <option key={p._id} value={p._id}>
+              {p.title}{p.location ? ` — ${p.location}` : ''}
+            </option>
+          ))}
+        </Select>
+        <ErrorMsg message={errors.propertyId?.message} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Purchase date *</Label>
+          <Input type="date" {...register('purchaseDate')} error={!!errors.purchaseDate} />
+          <ErrorMsg message={errors.purchaseDate?.message} />
+        </div>
+        <div>
+          <Label>My share (%) *</Label>
+          <Input type="number" step="0.5" {...register('mySharePercent')} error={!!errors.mySharePercent} />
+          <ErrorMsg message={errors.mySharePercent?.message} />
+        </div>
+        <div className="col-span-2">
+          <Label>Purchase price (₹) *</Label>
+          <Input type="number" {...register('purchasePrice')} error={!!errors.purchasePrice} />
+          <ErrorMsg message={errors.purchasePrice?.message} />
+        </div>
+        <div>
+          <Label>Holding costs (₹)</Label>
+          <Input type="number" {...register('holdingCosts')} />
+        </div>
+        <div>
+          <Label>Target sale price (₹)</Label>
+          <Input type="number" {...register('targetSalePrice')} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Notes</Label>
+        <Textarea {...register('notes')} rows={2} />
+      </div>
+
+      <div className="rounded-xl border border-zinc-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs font-medium text-zinc-700">Co-investors</p>
+          <Button type="button" size="sm" variant="secondary" onClick={() => append({ name: '', phone: '', amountInvested: 0 as any, sharePercent: 0 as any })}>
+            + Add
+          </Button>
+        </div>
+
+        {fields.length === 0 ? (
+          <p className="text-xs text-zinc-500">Optional — add partners if any.</p>
+        ) : (
+          <div className="space-y-3">
+            {fields.map((f, idx) => (
+              <div key={f.id} className="rounded-lg border border-zinc-200 p-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Label>Name *</Label>
+                    <Input {...register(`coInvestors.${idx}.name` as const)} error={!!errors.coInvestors?.[idx]?.name} />
+                    <ErrorMsg message={errors.coInvestors?.[idx]?.name?.message as any} />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input {...register(`coInvestors.${idx}.phone` as const)} />
+                  </div>
+                  <div>
+                    <Label>Amount (₹) *</Label>
+                    <Input type="number" {...register(`coInvestors.${idx}.amountInvested` as const)} error={!!errors.coInvestors?.[idx]?.amountInvested} />
+                    <ErrorMsg message={errors.coInvestors?.[idx]?.amountInvested?.message as any} />
+                  </div>
+                  <div>
+                    <Label>Share (%) *</Label>
+                    <Input type="number" step="0.5" {...register(`coInvestors.${idx}.sharePercent` as const)} error={!!errors.coInvestors?.[idx]?.sharePercent} />
+                    <ErrorMsg message={errors.coInvestors?.[idx]?.sharePercent?.message as any} />
+                  </div>
+                </div>
+                <div className="pt-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => remove(idx)}>Remove</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {addInvestment.error && <p className="text-xs text-red-600">{(addInvestment.error as Error).message}</p>}
+
+      <div className="flex gap-2 pt-2">
+        <Button type="submit" loading={addInvestment.isPending} className="flex-1">Add investment</Button>
         <Button type="button" variant="secondary" onClick={onClose}>Cancel</Button>
       </div>
     </form>

@@ -9,6 +9,7 @@ import { cn } from '@/lib/cn'
 import { formatRupees, formatDate, getFollowUpStatus, getPresetDate } from '@/lib/utils'
 import { FOLLOWUP_PRESETS, LEAD_STATUSES } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
+import { useToast } from '@/components/ToastProvider'
 
 const ACTIVE_STAGES = LEAD_STATUSES.filter(s => s !== 'new')
 
@@ -30,6 +31,7 @@ export function LeadCard({ lead, compact = false, onSaved }: LeadCardProps) {
 
   const update = useUpdateLead(lead._id)
   const { openEditLead } = useUIStore()
+  const toast = useToast()
 
   const followUpStatus = getFollowUpStatus(lead.followUpDate)
 
@@ -44,8 +46,11 @@ export function LeadCard({ lead, compact = false, onSaved }: LeadCardProps) {
     try {
       await update.mutateAsync({ followUpDate, status: stage, note: note.trim() || undefined })
       setNote('')
+      toast.success('Lead saved')
       onSaved?.()
-    } catch {/* error handled by mutation */ }
+    } catch (e) {
+      toast.error((e as Error).message || 'Something went wrong')
+    }
   }
 
   const overdueBanner = followUpStatus?.color === 'red'

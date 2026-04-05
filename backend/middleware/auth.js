@@ -2,12 +2,11 @@ const jwt = require('jsonwebtoken')
 
 // ─── AUTH MIDDLEWARE ──────────────────────────────────────────────────────────
 function auth(req, res, next) {
-  const header = req.headers.authorization
-  if (!header || !header.startsWith('Bearer ')) {
+  const token = req.cookies?.sk_token
+  if (!token) {
     return res.status(401).json({ success: false, error: 'No token provided', code: 401 })
   }
 
-  const token = header.split(' ')[1]
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     req.user = decoded // { _id, name, role }

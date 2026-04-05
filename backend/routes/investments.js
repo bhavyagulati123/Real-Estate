@@ -78,6 +78,17 @@ router.put('/:id', auth, async (req, res) => {
   }
 })
 
+// DELETE /api/investments/:id
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const investment = await Investment.findByIdAndDelete(req.params.id)
+    if (!investment) return res.status(404).json({ success: false, error: 'Investment not found', code: 404 })
+    res.json({ success: true, message: 'Investment deleted' })
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message, code: 500 })
+  }
+})
+
 // PUT /api/investments/:id/sell
 router.put('/:id/sell', auth, async (req, res) => {
   try {

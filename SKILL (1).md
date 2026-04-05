@@ -37,13 +37,13 @@ SK Properties is a local property brokerage in Mohan Garden, Delhi. Run by a sin
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14 (App Router) |
+| Frontend | Next.js 14 (App Router), TypeScript |
 | Backend | Node.js with Express |
-| Database | postgress with prisma |
-| State Management | Zustand |
-| Styling | Tailwind CSS |
-| Deployment | Vercel (frontend) + Railway or Render (backend) |
-| Auth | JWT with refresh tokens |
+| Database | MongoDB with Mongoose |
+| State Management | Zustand (auth + UI) + TanStack Query (server state) |
+| Styling | Tailwind CSS + Framer Motion |
+| Deployment | Docker Compose (all services containerised) |
+| Auth | JWT stored in HTTP-only cookies (sk_token 7d, sk_refresh_token 30d) |
 
 ---
 
@@ -335,8 +335,10 @@ const DealSchema = new mongoose.Schema({
   buyerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
   sellerAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
   commissionSplitPercent: { type: Number },
-  // Father's share % when commission is split
-  // e.g. 50 = Father keeps 50% of his side's commission
+  // Buyer agent's % of the total actualCommission
+  // e.g. 60 = buyerAgent gets 60%, sellerAgent gets 40%
+  // If not set, all commission goes to buyerAgent
+  // Both agents' totalDeals and totalCommission auto-update on deal close
 
   // Risk
   riskLevel: { type: String, enum: ['low', 'medium', 'high'], default: 'low' },
@@ -500,36 +502,52 @@ APIs:
 
 ---
 
-### Phase 2 — Deal Pipeline
+### Phase 2 — Deal Intelligence ✅ IMPLEMENTED
 
-Screens to build:
-- Kanban board: negotiation / bayana / papers / closed / lost columns
-- Deal detail: parties, money flow timeline, payment entry
-- Add payment form: type, amount, date, paidBy, notes, verify toggle
-- Commission panel: expected vs actual, leakage display
-- Risk flag panel
+Screens built:
+- Deal list with stage filter tabs (negotiation / bayana / papers / closed / lost)
+- Deal detail: parties, payment progress bar, payment history, stage history
+- Add payment form: type, amount, date, paidBy, receivedBy, notes, verify toggle
+- Advance stage with optional notes
+- Close deal (with date) and Mark lost (with required reason)
+- Risk level visible on deal cards and detail
 
 APIs:
-- POST /deals
+- GET /deals — filters by stage, riskLevel, dealType
+- POST /deals — creates deal, locks floorPrice at creation
+- GET /deals/:id — full deal with payments + stageHistory
 - PUT /deals/:id/stage — advance stage, log to stageHistory
-- POST /deals/:id/payments — add payment
-- PUT /deals/:id/payments/:pid/verify — verify commission, trigger WealthEntry
-- GET /deals — filters by stage, risk, dealType
+- POST /deals/:id/payments — add payment; if type=commission & verified=true → auto WealthEntry
+- PUT /deals/:id/payments/:pid/verify — retroactive verify; if commission → auto WealthEntry
+- PUT /deals/:id/close — marks closed, updates agent totalDeals + totalCommission via split
+- PUT /deals/:id/lost — requires lostReason, updates linked lead statuses
+
+Commission split logic on close:
+- buyerAgentShare = actualCommission × commissionSplitPercent / 100
+- sellerAgentShare = actualCommission × (100 − commissionSplitPercent) / 100
+- If commissionSplitPercent not set: all goes to buyerAgent
 
 ---
 
-### Phase 3 — Investment Tracker
+### Phase 3 — Investment Tracker ✅ IMPLEMENTED
 
-Screens to build:
-- Portfolio list: holding properties with holding period and target profit
+Screens built:
+- Investment list with KPI cards (holding value, realised profit); cards are clickable
 - Add investment form with co-investor section
-- Investment detail: costs, target vs actual, profit calculation
-- Mark sold flow: enter sale price, auto-calculate profit
+- Investment detail: purchase breakdown, co-investor table, days holding
+- Mark sold flow: enter actual sale price → live profit preview (green/red) → confirm
 
 APIs:
-- POST /investments
-- PUT /investments/:id
-- PUT /investments/:id/sell
+- GET /investments — list; filter by status (holding/sold)
+- POST /investments — create; marks property ownerOwned
+- GET /investments/:id — full investment with co-investors populated
+- PUT /investments/:id — edit
+- DELETE /investments/:id — delete
+- PUT /investments/:id/sell — calculates myProfit, creates investmentProfit WealthEntry, marks property sold
+
+Profit formula on sell:
+  gross = actualSalePrice × (mySharePercent / 100)
+  myProfit = gross − myAmount − (holdingCosts × mySharePercent / 100)
 
 ---
 
@@ -674,15 +692,28 @@ All endpoints return this structure:
 
 ## 10. Environment Variables
 
+**backend/.env**
 ```
-MONGODB_URI=
-JWT_SECRET=
-JWT_REFRESH_SECRET=
+MONGODB_URI=mongodb://localhost:27017/sk-properties
+JWT_SECRET=<long random string>
+JWT_REFRESH_SECRET=<different long random string>
 PORT=5000
 NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
 META_ACCESS_TOKEN=
 WHATSAPP_TOKEN=
 ```
+
+**frontend/.env.local**
+```
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+**Auth notes:**
+- Login sets two HTTP-only cookies: sk_token (7d) and sk_refresh_token (30d)
+- All API calls must use `credentials: 'include'` — browser sends cookie automatically
+- Next.js middleware at frontend/middleware.ts reads sk_token cookie to protect all routes
+- Backend auth middleware reads req.cookies.sk_token (requires cookie-parser)
 
 ---
 
