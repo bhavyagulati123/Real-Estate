@@ -36,11 +36,15 @@ export default function LeadsPage() {
       {/* Search + filter bar */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
+          <label htmlFor="leads_search" className="sr-only">Search leads</label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
           <input
+            id="leads_search"
+            name="leads_search"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or phone..."
+            autoComplete="off"
             className="w-full h-10 pl-9 pr-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1"
           />
         </div>
@@ -75,11 +79,13 @@ export default function LeadsPage() {
           </Select>
           <label className="flex items-center gap-2 text-sm text-zinc-600 cursor-pointer px-1">
             <input
+              id="leads_overdueOnly"
+              name="leads_overdueOnly"
               type="checkbox"
               checked={!!leadsFilter.overdueOnly}
               onChange={e => setLeadsFilter({ overdueOnly: e.target.checked || undefined })}
             />
-            Overdue only
+            <span>Overdue only</span>
           </label>
         </div>
       )}

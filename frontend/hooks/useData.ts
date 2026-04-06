@@ -20,7 +20,6 @@ export interface Property {
   dealType:            'brokerage' | 'inflated' | 'coInvestment'
   ownershipStatus:     string
   sellerId?:           { _id: string; name: string; phone: string } | null
-  sourceAgentId?:      { _id: string; name: string } | null
   images?:             string[]
   notes?:              string
   createdAt:           string
@@ -59,23 +58,10 @@ export interface Deal {
   payments:             Payment[]
   totalPaid:            number
   remainingAmount?:     number
-  buyerAgentId?:        { _id: string; name: string } | null
-  sellerAgentId?:       { _id: string; name: string } | null
-  commissionSplitPercent?: number
   riskLevel:            string
   riskNotes?:           string
   notes?:               string
   createdAt:            string
-}
-
-export interface Agent {
-  _id:             string
-  name:            string
-  phone?:          string
-  type:            'internal' | 'external'
-  totalDeals:      number
-  totalCommission: number
-  notes?:          string
 }
 
 export interface Investment {
@@ -204,6 +190,7 @@ export function useAdvanceDealStage(dealId: string) {
     onSuccess: (res) => {
       qc.setQueryData(queryKeys.deal(dealId), res)
       qc.invalidateQueries({ queryKey: ['deals'] })
+      qc.invalidateQueries({ queryKey: ['properties'] })
       qc.invalidateQueries({ queryKey: queryKeys.dashboard })
     },
   })
@@ -212,7 +199,7 @@ export function useAdvanceDealStage(dealId: string) {
 export function useCloseDeal(dealId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (d: { closedDate?: string }) =>
+    mutationFn: (d: { closedDate?: string; commissionAmount?: number }) =>
       api.put<ApiRes<Deal>>(`/api/deals/${dealId}/close`, d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['deals'] })
@@ -234,35 +221,6 @@ export function useLostDeal(dealId: string) {
       qc.invalidateQueries({ queryKey: ['properties'] })
       qc.invalidateQueries({ queryKey: queryKeys.dashboard })
     },
-  })
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// AGENTS
-// ═══════════════════════════════════════════════════════════════════════════════
-export function useAgents(type?: 'internal' | 'external') {
-  const url = type ? `/api/agents?type=${type}` : '/api/agents'
-  return useQuery({
-    queryKey: type ? [...queryKeys.agents, type] : queryKeys.agents,
-    queryFn:  () => api.get<ApiRes<Agent[]>>(url),
-    staleTime: 1000 * 60 * 10,
-  })
-}
-
-export function useAddAgent() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (d: { name: string; phone?: string; type: 'internal' | 'external'; notes?: string }) =>
-      api.post<ApiRes<Agent>>('/api/agents', d),
-    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.agents }),
-  })
-}
-
-export function useEditAgent(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (d: Partial<Agent>) => api.put<ApiRes<Agent>>(`/api/agents/${id}`, d),
-    onSuccess:  () => qc.invalidateQueries({ queryKey: queryKeys.agents }),
   })
 }
 

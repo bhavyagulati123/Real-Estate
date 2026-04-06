@@ -28,7 +28,7 @@ router.get('/', auth, async (req, res) => {
       .skip((Number(page) - 1) * Number(limit))
       .limit(Number(limit))
       .populate('sellerId', 'name phone')
-      .populate('sourceAgentId', 'name phone')
+
 
     res.json({
       success: true,
@@ -63,7 +63,7 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const property = await Property.findOne({ _id: req.params.id, isDeleted: false })
       .populate('sellerId', 'name phone status')
-      .populate('sourceAgentId', 'name phone')
+
     if (!property) return res.status(404).json({ success: false, error: 'Property not found', code: 404 })
     res.json({ success: true, data: property })
   } catch (err) {

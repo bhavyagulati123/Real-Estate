@@ -29,11 +29,15 @@ export default function PropertiesPage() {
       {/* Search + filters */}
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
+          <label htmlFor="properties_search" className="sr-only">Search properties</label>
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none" />
           <input
+            id="properties_search"
+            name="properties_search"
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by title or location..."
+            autoComplete="off"
             className="w-full h-10 pl-9 pr-3 rounded-lg border border-zinc-300 bg-white text-sm placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1"
           />
         </div>

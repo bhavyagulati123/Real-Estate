@@ -16,7 +16,6 @@ export interface Lead {
   phone:              string
   alternatePhone?:    string
   source:             string
-  sourceAgentId?:     { _id: string; name: string; phone?: string } | null
   leadType:           'buyer' | 'seller'
   budget?:            number
   location?:          string

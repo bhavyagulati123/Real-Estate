@@ -2,7 +2,7 @@ const express      = require('express')
 const Deal         = require('../models/Deal')
 const Property     = require('../models/Property')
 const Lead         = require('../models/Lead')
-const { Agent, WealthEntry } = require('../models/index')
+const { WealthEntry } = require('../models/index')
 const { auth }     = require('../middleware/auth')
 
 const router = express.Router()
@@ -25,9 +25,6 @@ router.get('/', auth, async (req, res) => {
       .populate('propertyId', 'title location block')
       .populate('buyerLeadId', 'name phone')
       .populate('sellerLeadId', 'name phone')
-      .populate('buyerAgentId', 'name phone')
-      .populate('sellerAgentId', 'name phone')
-
     res.json({
       success: true,
       data: deals,
@@ -104,8 +101,6 @@ router.get('/:id', auth, async (req, res) => {
       .populate('propertyId')
       .populate('buyerLeadId',  'name phone status interactionHistory')
       .populate('sellerLeadId', 'name phone status interactionHistory')
-      .populate('buyerAgentId',  'name phone')
-      .populate('sellerAgentId', 'name phone')
     if (!deal) return res.status(404).json({ success: false, error: 'Deal not found', code: 404 })
     res.json({ success: true, data: deal })
   } catch (err) {
@@ -157,7 +152,16 @@ router.put('/:id/stage', auth, async (req, res) => {
     const deal = await Deal.findOne({ _id: req.params.id, isDeleted: false })
     if (!deal) return res.status(404).json({ success: false, error: 'Deal not found', code: 404 })
 
-    const stageOrder = ['negotiation', 'bayana', 'papers', 'closed']
+    // Closing must go through the /close endpoint (so property status + commission are handled)
+    if (stage === 'closed') {
+      return res.status(400).json({
+        success: false,
+        error: 'Use the close-deal endpoint (PUT /close) to close a deal',
+        code: 400,
+      })
+    }
+
+    const stageOrder = ['negotiation', 'bayana', 'papers']
     const currentIdx = stageOrder.indexOf(deal.stage)
     const newIdx     = stageOrder.indexOf(stage)
 
@@ -260,7 +264,7 @@ router.put('/:id/payments/:paymentId/verify', auth, async (req, res) => {
 // ─── PUT /api/deals/:id/close ─────────────────────────────────────────────────
 router.put('/:id/close', auth, async (req, res) => {
   try {
-    const { closedDate } = req.body
+    const { closedDate, commissionAmount } = req.body
     const deal = await Deal.findOne({ _id: req.params.id, isDeleted: false })
     if (!deal) return res.status(404).json({ success: false, error: 'Deal not found', code: 404 })
 
@@ -268,24 +272,40 @@ router.put('/:id/close', auth, async (req, res) => {
     deal.closedDate = closedDate ? new Date(closedDate) : new Date()
     deal.stageHistory.push({ stage: 'closed', date: new Date() })
 
+    // Record commission payment if provided
+    const commAmt = Number(commissionAmount)
+    if (commAmt > 0) {
+      deal.payments.push({
+        type: 'commission', amount: commAmt,
+        date: deal.closedDate, verified: true,
+        notes: 'Recorded at deal close',
+      })
+      deal.actualCommission = (deal.actualCommission || 0) + commAmt
+    }
+
     // Side effects in parallel
-    await Promise.all([
+    const property = await Property.findById(deal.propertyId)
+    const sideEffects = [
       deal.save(),
       Property.findByIdAndUpdate(deal.propertyId, { ownershipStatus: 'sold' }),
       Lead.findByIdAndUpdate(deal.buyerLeadId,  { status: 'closed' }),
       Lead.findByIdAndUpdate(deal.sellerLeadId, { status: 'closed' }),
-      // Update agent stats — totalDeals + commission split
-      ...(() => {
-        const total  = deal.actualCommission || 0
-        const split  = deal.commissionSplitPercent  // buyer agent's % share
-        const buyerShare  = split != null ? Math.round(total * split / 100)         : total
-        const sellerShare = split != null ? Math.round(total * (100 - split) / 100) : 0
-        return [
-          deal.buyerAgentId  && Agent.findByIdAndUpdate(deal.buyerAgentId,  { $inc: { totalDeals: 1, totalCommission: buyerShare  } }),
-          deal.sellerAgentId && Agent.findByIdAndUpdate(deal.sellerAgentId, { $inc: { totalDeals: 1, totalCommission: sellerShare } }),
-        ]
-      })(),
-    ])
+    ]
+
+    if (commAmt > 0) {
+      sideEffects.push(
+        WealthEntry.create({
+          type:        'income',
+          category:    deal.dealType === 'inflated' ? 'margin' : 'commission',
+          amount:      commAmt,
+          date:        deal.closedDate,
+          dealId:      deal._id,
+          description: `Commission — ${property?.title || 'Property'}`,
+        })
+      )
+    }
+
+    await Promise.all(sideEffects)
 
     res.json({ success: true, data: deal, message: 'Deal closed' })
   } catch (err) {

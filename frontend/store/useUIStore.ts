@@ -40,10 +40,6 @@ interface UIStore {
   openAddDeal:  (propertyId?: string, buyerLeadId?: string) => void
   closeAddDeal: () => void
 
-  addAgentOpen: boolean
-  openAddAgent:  () => void
-  closeAddAgent: () => void
-
   addPaymentDealId: string | null
   openAddPayment:  (dealId: string) => void
   closeAddPayment: () => void
@@ -88,11 +84,6 @@ export const useUIStore = create<UIStore>((set) => ({
     addDealBuyerLeadId: buyerLeadId || null,
   }),
   closeAddDeal: () => set({ addDealOpen: false, addDealPropertyId: null, addDealBuyerLeadId: null }),
-
-  // Add Agent
-  addAgentOpen:  false,
-  openAddAgent:  () => set({ addAgentOpen: true }),
-  closeAddAgent: () => set({ addAgentOpen: false }),
 
   // Add Payment
   addPaymentDealId: null,

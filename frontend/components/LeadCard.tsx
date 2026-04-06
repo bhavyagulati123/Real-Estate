@@ -119,7 +119,7 @@ export function LeadCard({ lead, compact = false, onSaved }: LeadCardProps) {
           overdueBanner ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'
         )}>
           {overdueBanner
-            ? `Follow-up overdue — call ${lead.name.split(' ')[0]} today`
+            ? `Follow-up overdue — call ${(lead.name || '').split(' ')[0] || lead.name} today`
             : `Follow-up due today`}
         </div>
       )}
@@ -130,9 +130,12 @@ export function LeadCard({ lead, compact = false, onSaved }: LeadCardProps) {
 
           {/* Reschedule follow-up */}
           <div>
-            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">
+            <label
+              htmlFor={`followUp_${lead._id}`}
+              className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2 block"
+            >
               Reschedule follow-up
-            </p>
+            </label>
             <div className="flex gap-1.5 flex-wrap mb-2">
               {FOLLOWUP_PRESETS.map(p => (
                 <button
@@ -150,20 +153,31 @@ export function LeadCard({ lead, compact = false, onSaved }: LeadCardProps) {
               ))}
             </div>
             <input
+              id={`followUp_${lead._id}`}
+              name={`followUp_${lead._id}`}
               type="date"
               value={followUpDate}
               onChange={e => { setFollowUpDate(e.target.value); setActivePreset(null) }}
+              autoComplete="off"
               className="w-full h-9 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1"
             />
           </div>
 
           {/* Note */}
           <div>
-            <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">Add note</p>
+            <label
+              htmlFor={`note_${lead._id}`}
+              className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2 block"
+            >
+              Add note
+            </label>
             <Textarea
+              id={`note_${lead._id}`}
+              name={`note_${lead._id}`}
               value={note}
               onChange={e => setNote(e.target.value)}
               placeholder="What happened on this call? What to discuss next time..."
+              autoComplete="off"
               rows={2}
             />
           </div>

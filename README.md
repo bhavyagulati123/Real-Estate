@@ -108,7 +108,7 @@ npm run dev                   # http://localhost:3000
 | Role     | Phone          | Password   |
 |----------|----------------|------------|
 | Admin    | +919999999999  | admin123   |
-| Operator | +919999999998  | father123  |
+| Operator | +919999999998  | owner123  |
 
 ---
 

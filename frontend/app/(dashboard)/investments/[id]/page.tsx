@@ -112,19 +112,40 @@ export default function InvestmentDetailPage() {
             </div>
           </div>
 
-          {previewProfit !== null && (
-            <div className={`rounded-lg px-4 py-3 flex items-center gap-2 ${previewProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-              {previewProfit >= 0
-                ? <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-                : <TrendingDown className="w-4 h-4 text-red-500 shrink-0" />}
-              <div>
-                <p className="text-xs text-zinc-500">Estimated my profit</p>
-                <p className={`text-sm font-semibold tabular-nums ${previewProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                  {formatRupees(previewProfit)}
-                </p>
+          {previewProfit !== null && (() => {
+            const grossPrev  = Math.round(Number(salePrice) * (inv.mySharePercent / 100))
+            const holdingPrev = Math.round((inv.holdingCosts || 0) * (inv.mySharePercent / 100))
+            return (
+              <div className={`rounded-lg px-4 py-3 space-y-1 ${previewProfit >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  {previewProfit >= 0
+                    ? <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
+                    : <TrendingDown className="w-4 h-4 text-red-500 shrink-0" />}
+                  <p className="text-xs font-medium text-zinc-600">Your {inv.mySharePercent}% share breakdown</p>
+                </div>
+                <div className="flex justify-between text-xs text-zinc-500">
+                  <span>{inv.mySharePercent}% of {formatRupees(Number(salePrice))}</span>
+                  <span>{formatRupees(grossPrev)}</span>
+                </div>
+                <div className="flex justify-between text-xs text-zinc-500">
+                  <span>Less your investment</span>
+                  <span>− {formatRupees(inv.myAmount)}</span>
+                </div>
+                {holdingPrev > 0 && (
+                  <div className="flex justify-between text-xs text-zinc-500">
+                    <span>Less holding costs share</span>
+                    <span>− {formatRupees(holdingPrev)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-1 border-t border-green-200">
+                  <span className="text-xs font-semibold text-zinc-900">Your net profit</span>
+                  <span className={`text-sm font-bold tabular-nums ${previewProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                    {formatRupees(previewProfit)}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
+            )
+          })()}
 
           <div className="flex gap-2">
             <Button type="submit" loading={sell.isPending} className="flex-1">Confirm sale</Button>
@@ -170,27 +191,50 @@ export default function InvestmentDetailPage() {
       </div>
 
       {/* Sold info */}
-      {isSold && (
-        <div className="bg-green-50 rounded-xl border border-green-200 p-4 mb-4">
-          <p className="text-[10px] font-medium text-green-600 uppercase tracking-widest mb-3">Sale result</p>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-            <div>
-              <p className="text-xs text-green-600">Actual sale price</p>
-              <p className="font-medium tabular-nums text-zinc-900">{formatRupees(inv.actualSalePrice)}</p>
+      {isSold && (() => {
+        const grossMyProceeds = Math.round(inv.actualSalePrice * (inv.mySharePercent / 100))
+        const myHoldingShare  = Math.round((inv.holdingCosts || 0) * (inv.mySharePercent / 100))
+        return (
+          <div className="bg-green-50 rounded-xl border border-green-200 p-4 mb-4">
+            <p className="text-[10px] font-medium text-green-600 uppercase tracking-widest mb-3">Sale result</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm mb-4">
+              <div>
+                <p className="text-xs text-green-600">Actual sale price (total)</p>
+                <p className="font-medium tabular-nums text-zinc-900">{formatRupees(inv.actualSalePrice)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-green-600">Sale date</p>
+                <p className="font-medium text-zinc-900">{formatDate(inv.saleDate)}</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs text-green-600">Sale date</p>
-              <p className="font-medium text-zinc-900">{formatDate(inv.saleDate)}</p>
-            </div>
-            <div className="col-span-2">
-              <p className="text-xs text-green-600">My profit</p>
-              <p className={`text-lg font-bold tabular-nums ${inv.myProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                {formatRupees(inv.myProfit)}
-              </p>
+
+            {/* Profit breakdown */}
+            <div className="border-t border-green-200 pt-3 space-y-1.5">
+              <p className="text-[10px] font-medium text-green-600 uppercase tracking-widest mb-2">Your profit breakdown ({inv.mySharePercent}% share)</p>
+              <div className="flex justify-between text-xs text-zinc-600">
+                <span>Your {inv.mySharePercent}% of sale ({formatRupees(inv.actualSalePrice)})</span>
+                <span className="tabular-nums font-medium">{formatRupees(grossMyProceeds)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-zinc-500">
+                <span>Less your investment</span>
+                <span className="tabular-nums">− {formatRupees(inv.myAmount)}</span>
+              </div>
+              {myHoldingShare > 0 && (
+                <div className="flex justify-between text-xs text-zinc-500">
+                  <span>Less your holding costs ({inv.mySharePercent}%)</span>
+                  <span className="tabular-nums">− {formatRupees(myHoldingShare)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1.5 border-t border-green-200">
+                <span className="text-sm font-semibold text-zinc-900">Your net profit</span>
+                <span className={`text-sm font-bold tabular-nums ${inv.myProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>
+                  {formatRupees(inv.myProfit)}
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Co-investors */}
       {inv.coInvestors?.length > 0 && (
