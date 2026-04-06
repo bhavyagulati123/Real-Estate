@@ -16,7 +16,6 @@ const LeadSchema = new mongoose.Schema({
     enum: ['call', 'whatsapp', 'agent', 'walkin', 'website', 'referral'],
     required: true,
   },
-  sourceAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
   leadType:      { type: String, enum: ['buyer', 'seller'], required: true },
 
   // Requirements

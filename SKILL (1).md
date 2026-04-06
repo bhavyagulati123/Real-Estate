@@ -7,25 +7,25 @@
 
 ## 1. Business Context
 
-SK Properties is a local property brokerage in Mohan Garden, Delhi. Run by a single experienced broker (referred to as "Father" or "Operator") with 15 years of local goodwill. The system replaces a physical notebook and memory-driven workflow.
+SK Properties is a local property brokerage in Mohan Garden, Delhi. Run by a single experienced broker (referred to as "Owner" or "Operator") with 15 years of local goodwill. The system replaces a physical notebook and memory-driven workflow.
 
 ### Revenue Models (Critical — All Three Must Be Supported)
 
 **Type A — Pure Brokerage**
-- Father connects buyer and seller
+- Owner connects buyer and seller
 - Earns commission (usually 1%) from one or both parties
 - Commission is separate from the deal price
 - If two agents are involved, each earns commission from their respective party
 
 **Type B — Price Inflation**
-- Father knows seller's actual floor price (minimum they will accept)
-- Father lists the property at a higher price to buyers
-- The spread between floor price and listed price is Father's margin
+- Owner knows seller's actual floor price (minimum they will accept)
+- Owner lists the property at a higher price to buyers
+- The spread between floor price and listed price is Owner's margin
 - No separate commission discussed — margin IS the revenue
 - margin = listedPrice - floorPrice
 
 **Type C — Co-Investment**
-- Father (sometimes with other agents or financers) buys the property outright
+- Owner (sometimes with other agents or financers) buys the property outright
 - Sells it later for profit
 - Revenue = profit on sale, not commission
 - Co-investors split profit proportionally by share percentage
@@ -96,7 +96,7 @@ const LeadSchema = new mongoose.Schema({
 
   // Qualification
   credibilityScore: { type: Number, min: 1, max: 5 },
-  // Father's gut judgment — 1=very doubtful, 3=seems genuine, 5=highly credible
+  // Owner's gut judgment — 1=very doubtful, 3=seems genuine, 5=highly credible
   // This captures 15 years of instinct in a single field
   // Primary qualification signal — more reliable than payment timeline
 
@@ -124,7 +124,7 @@ const LeadSchema = new mongoose.Schema({
   // What to discuss on next call — replaces the notebook
 
   notes: { type: String },
-  // General notes, Father's gut feeling, any context
+  // General notes, Owner's gut feeling, any context
 
   isDeleted: { type: Boolean, default: false },
   deletedAt: { type: Date },
@@ -157,7 +157,7 @@ Lead.find({
 
 ### 3.2 Property Schema
 
-A Property is a physical property — available, under negotiation, or owned by Father.
+A Property is a physical property — available, under negotiation, or owned by Owner.
 
 ```javascript
 const PropertySchema = new mongoose.Schema({
@@ -183,7 +183,7 @@ const PropertySchema = new mongoose.Schema({
   size: { type: Number },
   buildingAge: { type: String },
   buildingCredibility: { type: Number, min: 1, max: 5 },
-  // Is building legally clean? Good construction? Father's assessment.
+  // Is building legally clean? Good construction? Owner's assessment.
 
   // PRICING — three price fields, all serve different purposes
   floorPrice: { type: Number },
@@ -194,7 +194,7 @@ const PropertySchema = new mongoose.Schema({
   // What seller is publicly asking — usually above floor
 
   listedPrice: { type: Number },
-  // What Father shows buyers
+  // What Owner shows buyers
   // In inflation deals: listedPrice > askingPrice
   // margin = listedPrice - floorPrice
 
@@ -210,7 +210,7 @@ const PropertySchema = new mongoose.Schema({
       'available',        // can be shown to buyers
       'underNegotiation', // active deal ongoing — do not bring new buyers
       'sold',             // completed
-      'ownerOwned'        // Father/group purchased — links to Investment
+      'ownerOwned'        // Owner/group purchased — links to Investment
     ],
     default: 'available'
   },
@@ -248,7 +248,7 @@ const PaymentSchema = new mongoose.Schema({
       'bayana',       // larger advance — legally binding milestone
       'partPayment',  // one of potentially multiple installments
       'fullPayment',  // final payment on registry/papers day
-      'commission'    // Father's commission — separate from deal price
+      'commission'    // Owner's commission — separate from deal price
     ],
     required: true
   },
@@ -357,7 +357,7 @@ const DealSchema = new mongoose.Schema({
 ```
 agreedPrice  = 5,000,000
 floorPrice   = 4,500,000
-margin       = 500,000   (Father's spread in inflated deal)
+margin       = 500,000   (Owner's spread in inflated deal)
 commission   = 50,000    (1% brokerage, separate)
 
 payments array:
@@ -372,7 +372,7 @@ payments array:
 
 ### 3.4 Investment Schema
 
-Properties Father has purchased — alone or with co-investors.
+Properties Owner has purchased — alone or with co-investors.
 
 ```javascript
 const CoInvestorSchema = new mongoose.Schema({
@@ -569,7 +569,7 @@ APIs:
 Separate Next.js public site feeding from Property collection.
 
 Pages:
-- Home: Father's credibility, 15 years, WhatsApp CTA
+- Home: Owner's credibility, 15 years, WhatsApp CTA
 - Listings: available properties with filters
 - Individual property: SEO-optimised with Mohan Garden keywords
 - About: local trust signals for Google Business Profile
@@ -603,7 +603,7 @@ SEO targets:
 | Role | Access |
 |---|---|
 | Admin (Bhavya) | Full access, system config, all data, all collections |
-| Operator (Father) | Full CRM, deals, investments — no system config |
+| Operator (Owner) | Full CRM, deals, investments — no system config |
 | Agent (future) | Own assigned leads only, no financial data |
 
 ---
@@ -736,7 +736,7 @@ This CRM is used daily by a 50+ year old broker on a mobile phone while visiting
 
 - Mobile-first. Most usage happens on phone, not desktop. Every screen must work at 375px width.
 - Fast to operate. The most common actions — reschedule follow-up, add a note, change stage — must be completable in under 30 seconds without navigating away from the lead card.
-- No clutter. Father does not need analytics dashboards with 20 charts. He needs to see: who to call today, what properties are available, and what deals are active.
+- No clutter. Owner does not need analytics dashboards with 20 charts. He needs to see: who to call today, what properties are available, and what deals are active.
 - Forgiving. He will enter data inconsistently. The system must handle missing fields gracefully without crashing or blocking him.
 
 ### Tech: Tailwind CSS
@@ -858,10 +858,10 @@ function formatRupees(amount) {
 
 ## 13. Lead Card Interaction Pattern
 
-This is the most important UI pattern in the entire system. Father uses this dozens of times per day.
+This is the most important UI pattern in the entire system. Owner uses this dozens of times per day.
 
 ### What it does
-From a single lead card, without navigating to a separate edit screen, Father can:
+From a single lead card, without navigating to a separate edit screen, Owner can:
 1. See who the lead is and their current overdue status at a glance
 2. Reschedule the follow-up with one tap (quick presets) or a date picker
 3. Add a note about what happened on the call
@@ -869,9 +869,9 @@ From a single lead card, without navigating to a separate edit screen, Father ca
 5. Save everything in one API call
 
 ### Why this matters
-The old workflow: Father finishes a call, writes something in a notebook, tries to remember when to call back. Leads go cold because nobody followed up.
+The old workflow: Owner finishes a call, writes something in a notebook, tries to remember when to call back. Leads go cold because nobody followed up.
 
-The new workflow: Father finishes a call, opens the app, taps "next week", types one line about the call, taps "negotiation", hits save. Done in 20 seconds. The system reminds him automatically.
+The new workflow: Owner finishes a call, opens the app, taps "next week", types one line about the call, taps "negotiation", hits save. Done in 20 seconds. The system reminds him automatically.
 
 ### The single API call on save
 All three updates — followUpDate, status, and new note — are sent in one PATCH request. Do NOT make three separate API calls.
@@ -1147,7 +1147,7 @@ export function LeadCard({ lead, onSave }) {
 
 ## 14. Daily Dashboard Layout
 
-This is the first screen Father sees every morning. It must answer three questions instantly:
+This is the first screen Owner sees every morning. It must answer three questions instantly:
 1. Who do I need to call today?
 2. What deals are active right now?
 3. Any urgent property situations?
@@ -1317,7 +1317,7 @@ export const FOLLOWUP_PRESETS = [
 SK Properties CRM is used by a single broker on mobile while actively working — visiting properties, calling clients, managing deals. The aesthetic must be:
 
 - Clean and professional — this is a business tool, not a consumer app
-- Fast to scan — Father should know what needs attention in 3 seconds
+- Fast to scan — Owner should know what needs attention in 3 seconds
 - Mobile-first — most usage is on phone, not desktop
 - Black and white palette with semantic color only for status signals
 
@@ -1908,12 +1908,12 @@ Every workflow below describes the exact user journey, what the frontend shows a
 
 ### 20.1 New Lead Comes In (Call/WhatsApp/Walkin)
 
-**Trigger:** Father receives a call or someone walks in.
+**Trigger:** Owner receives a call or someone walks in.
 
 **User journey:**
-1. Father opens app → taps "+" or "Add Lead" on leads page
+1. Owner opens app → taps "+" or "Add Lead" on leads page
 2. Form opens (sheet from right on mobile, modal on desktop)
-3. Father fills: name, phone, leadType (buyer/seller), source, location, block, propertyType, configuration (if residential), budget, credibilityScore, notes
+3. Owner fills: name, phone, leadType (buyer/seller), source, location, block, propertyType, configuration (if residential), budget, credibilityScore, notes
 4. Taps Save
 
 **Frontend state:**
@@ -1947,9 +1947,9 @@ Response: { success: true, data: newLead }
 
 ---
 
-### 20.2 Morning Dashboard — Father Opens App
+### 20.2 Morning Dashboard — Owner Opens App
 
-**Trigger:** Father opens CRM, first screen every morning.
+**Trigger:** Owner opens CRM, first screen every morning.
 
 **User journey:**
 1. App loads → Dashboard screen
@@ -2002,7 +2002,7 @@ const [overdue, dueToday, upcoming, activeDeals] = await Promise.all([
 
 ### 20.3 Reschedule Follow-up + Add Note + Change Stage
 
-**Trigger:** Father finishes a call with a lead and wants to log what happened.
+**Trigger:** Owner finishes a call with a lead and wants to log what happened.
 
 **User journey:**
 1. Opens lead card (from dashboard or leads list)
@@ -2066,14 +2066,14 @@ async function updateLead(req, res) {
 
 ### 20.4 New Property Added → Matching Buyers Found
 
-**Trigger:** A seller approaches Father with a property.
+**Trigger:** A seller approaches Owner with a property.
 
 **User journey:**
-1. Father taps "Add Property" 
+1. Owner taps "Add Property" 
 2. Fills: title, location, block, propertyType, configuration, size, buildingAge, floorPrice, askingPrice, listedPrice, dealType, sellerId (select from leads), buildingCredibility, notes
 3. Saves
 4. System immediately shows "3 matching buyers found" banner on property detail page
-5. Father taps to see matched buyers, calls them from the list
+5. Owner taps to see matched buyers, calls them from the list
 
 **Frontend:**
 ```
@@ -2125,7 +2125,7 @@ async function findMatchingBuyers(propertyId) {
 
 ### 20.5 Deal Created (Buyer + Seller Matched)
 
-**Trigger:** Father decides to proceed — a buyer is interested in a specific property.
+**Trigger:** Owner decides to proceed — a buyer is interested in a specific property.
 
 **User journey:**
 1. From property detail (matched buyers panel) or manually via "New Deal"
@@ -2327,7 +2327,7 @@ Response: { success: true, data: updatedDeal }
 
 ### 20.9 Investment Property Purchased
 
-**Trigger:** Father (with or without co-investors) buys a property.
+**Trigger:** Owner (with or without co-investors) buys a property.
 
 **User journey:**
 1. Navigate to Investments → "Add Investment"
@@ -2352,7 +2352,7 @@ Response: { success: true, data: newInvestment }
 
 ### 20.10 Investment Property Sold
 
-**Trigger:** Father sells an investment property.
+**Trigger:** Owner sells an investment property.
 
 **User journey:**
 1. Investment detail → "Mark as Sold"
@@ -2726,7 +2726,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       queries: {
         staleTime: 1000 * 60 * 2,   // data considered fresh for 2 minutes
         retry: 1,                    // retry failed requests once
-        refetchOnWindowFocus: true,  // refetch when Father switches back to the app
+        refetchOnWindowFocus: true,  // refetch when Owner switches back to the app
       },
     },
   }))
@@ -3350,13 +3350,13 @@ export const useUIStore = create<UIStore>((set) => ({
 This is the complete flow from button click to UI update.
 
 ```
-Father taps "Add Lead"
+Owner taps "Add Lead"
     ↓
 useUIStore.openAddLead() → addLeadOpen: true → Sheet opens (Framer Motion)
     ↓
-Father fills form (react-hook-form + zod validation)
+Owner fills form (react-hook-form + zod validation)
     ↓
-Father taps "Save"
+Owner taps "Save"
     ↓
 useAddLead().mutate(formData)
     ↓

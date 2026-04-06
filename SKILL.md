@@ -10,7 +10,7 @@
 
 SK Properties is a 15-year-old local property brokerage in Mohan Garden, Delhi West.
 The business operates on commission and runs three distinct revenue models simultaneously.
-The owner (referred to as "Father" in this document) currently operates entirely from memory
+The owner (referred to as "owner" in this document) currently operates entirely from memory
 and a physical notebook. This system replaces that.
 
 ### Three Revenue Models
@@ -19,10 +19,10 @@ Every piece of commission/financial logic must account for all three:
 1. **Brokerage** — Connect buyer and seller. Earn 1% commission from one or both sides.
    Commission is separate from the deal price. Agent splits may apply.
 
-2. **Inflation** — Father knows seller's floor price. Presents a higher listed price to buyer.
+2. **Inflation** — owner knows seller's floor price. Presents a higher listed price to buyer.
    The spread (listedPrice − floorPrice) is the revenue. No separate commission discussed.
 
-3. **Co-Investment** — Father buys property (alone or with partners) and sells later.
+3. **Co-Investment** — owner buys property (alone or with partners) and sells later.
    Revenue is profit on sale. Tracked in the Investment module, not the Deal commission fields.
 
 ### Key Business Facts
@@ -33,7 +33,7 @@ Every piece of commission/financial logic must account for all three:
 - Deals take 2–6 months average; money moves in multiple installments
 - Commission received only after papers signed and full payment transferred
 - External agents collaborate frequently — each earns from their respective party
-- Father's credibility judgment about a person/property is a first-class data point
+- owner's credibility judgment about a person/property is a first-class data point
 
 ---
 
@@ -57,7 +57,7 @@ Every piece of commission/financial logic must account for all three:
 | Role | Access | Description |
 |---|---|---|
 | admin | Full system | Bhavya — configuration, analytics, all data |
-| operator | CRM + Deals + Investments | Father — daily usage |
+| operator | CRM + Deals + Investments | owner — daily usage |
 | agent | Assigned leads only | Future external agents |
 
 Role is stored on the User model. All API routes check role via middleware.
@@ -90,10 +90,10 @@ Represents a person — buyer or seller — who has shown interest.
   size: Number,                  // square yards
   buildingAge: String,           // e.g. '5 years', '10+ years', 'new construction'
 
-  // Qualification — Father's judgment
-  credibilityScore: Number,      // 1–5, Father's gut assessment of this person
+  // Qualification — owner's judgment
+  credibilityScore: Number,      // 1–5, owner's gut assessment of this person
   ownershipType: String,         // enum: ['selfOwned','financer','sharedWithAgent'] — for sellers
-  notes: String,                 // free text — anything important Father noticed
+  notes: String,                 // free text — anything important owner noticed
 
   // Pipeline
   status: String,                // enum: ['new','contacted','interested','visit','negotiation','bayana','papers','closed','lost']
@@ -114,7 +114,7 @@ Represents a person — buyer or seller — who has shown interest.
 - `ownershipType` is only relevant when `leadType` is `seller`
 - `sourceAgentId` is null for direct leads (call/whatsapp/walkin)
 - Every lead MUST have a `followUpDate` set — enforced at creation
-- `credibilityScore` is mandatory — Father must rate every lead
+- `credibilityScore` is mandatory — owner must rate every lead
 
 ---
 
@@ -134,12 +134,12 @@ Represents a physical property — available, under negotiation, or owned.
   configuration: String,         // enum: ['1BHK','2BHK','3BHK','4BHK','Studio',null]
   size: Number,                  // square yards
   buildingAge: String,
-  buildingCredibility: Number,   // 1–5, Father's assessment of legal/structural quality
+  buildingCredibility: Number,   // 1–5, owner's assessment of legal/structural quality
   
   // Pricing — private and public layers
   floorPrice: Number,            // PRIVATE — seller's actual minimum. Never shown to buyers.
   askingPrice: Number,           // What seller publicly wants
-  listedPrice: Number,           // What Father shows buyers (may be inflated above askingPrice)
+  listedPrice: Number,           // What owner shows buyers (may be inflated above askingPrice)
   
   // Deal classification
   dealType: String,              // enum: ['brokerage','inflated','coInvestment']
@@ -149,7 +149,7 @@ Represents a physical property — available, under negotiation, or owned.
                                  // available = open for buyers
                                  // underNegotiation = active deal in progress
                                  // sold = completed
-                                 // ownerOwned = Father/investment group holds this property
+                                 // ownerOwned = owner/investment group holds this property
   sellerId: ObjectId,            // ref: Lead — the seller's contact record
   sourceAgentId: ObjectId,       // ref: Agent — who brought this listing in (null if direct)
 
@@ -212,13 +212,13 @@ The transaction connecting a buyer, seller, and property. Tracks the full money 
   // Commission — separate from deal price
   commission: {
     agreedAmount: Number,        // what was decided with both parties
-    actualAmount: Number,        // what Father actually received (often less)
-    receivedDate: Date,          // when commission hit Father's hand
+    actualAmount: Number,        // what owner actually received (often less)
+    receivedDate: Date,          // when commission hit owner's hand
     notes: String,               // e.g. "they paid 18k instead of 20k, accepted"
     
-    // If another agent is involved on Father's side
+    // If another agent is involved on owner's side
     splitWithAgentId: ObjectId,  // ref: Agent
-    splitPercent: Number,        // Father's share percentage (e.g. 60 means Father gets 60%)
+    splitPercent: Number,        // owner's share percentage (e.g. 60 means owner gets 60%)
     myFinalAmount: Number        // auto-calculated: actualAmount × splitPercent / 100
                                  // THIS is the amount that flows to Wealth dashboard
   },
@@ -255,7 +255,7 @@ The transaction connecting a buyer, seller, and property. Tracks the full money 
 
 ### 4.4 Investment
 
-Properties Father has purchased — alone or with partners — to sell for profit.
+Properties owner has purchased — alone or with partners — to sell for profit.
 
 ```javascript
 {
@@ -265,7 +265,7 @@ Properties Father has purchased — alone or with partners — to sell for profi
 
   // Purchase details
   purchasePrice: Number,         // total price paid
-  mySharePercent: Number,        // Father's ownership percentage (100 if solo)
+  mySharePercent: Number,        // owner's ownership percentage (100 if solo)
   myAmount: Number,              // auto-calculated: purchasePrice × mySharePercent / 100
   purchaseDate: Date,
 
@@ -283,7 +283,7 @@ Properties Father has purchased — alone or with partners — to sell for profi
   holdingCosts: Number,          // maintenance, tax, interest accumulated while holding
 
   // Exit
-  targetSalePrice: Number,       // what Father wants to sell at
+  targetSalePrice: Number,       // what owner wants to sell at
   actualSalePrice: Number,       // populated on sale
   saleDate: Date,
 
@@ -325,7 +325,7 @@ Anyone who brings or handles leads — internal staff or external collaborators.
   // Performance (auto-aggregated)
   totalDeals: Number,
   totalCommissionEarned: Number, // for internal agents
-  totalCommissionPaid: Number,   // for external agents Father paid out
+  totalCommissionPaid: Number,   // for external agents owner paid out
 
   notes: String,
   createdAt: Date
@@ -365,7 +365,7 @@ Every financial event — income or expense — flows here. This is the wealth d
 
 ## 5. Matching Engine
 
-The feature that delivers immediate daily value to Father.
+The feature that delivers immediate daily value to owner.
 
 **Trigger:** A new Property is added OR an existing Property becomes available.
 
@@ -385,7 +385,7 @@ const matches = await Lead.find({
 ```
 
 **Result:** Ranked list of matching buyer leads shown immediately when a property is added.
-Father can one-tap to log a call or set a follow-up from the match list.
+owner can one-tap to log a call or set a follow-up from the match list.
 
 ---
 
@@ -402,7 +402,7 @@ const dueToday = await Lead.find({
 ```
 
 **Dashboard alert:** Count of overdue follow-ups shown in header badge.
-Father sees his follow-up list first thing every day.
+owner sees his follow-up list first thing every day.
 
 **Follow-up cadence guidelines (suggested defaults, overridable):**
 - Status = new/contacted → follow up in 3 days
@@ -535,7 +535,7 @@ These are never stored — always calculated at query time or in the API respons
 
 ## 11. UI Screens by Role
 
-### Operator (Father) — Daily View
+### Operator (owner) — Daily View
 1. **Dashboard** — follow-up alerts count, active deals count, today's tasks
 2. **Follow-ups** — list of leads due today, sorted by credibility score
 3. **Lead Detail** — full lead info, interaction history, set follow-up
@@ -556,7 +556,7 @@ All of the above plus:
 
 ## 12. Design System Notes
 
-- Mobile-first — Father uses phone in field, Bhavya uses desktop
+- Mobile-first — owner uses phone in field, Bhavya uses desktop
 - No heavy UI — fast load on mid-range Android is a requirement
 - Language: English UI with Hindi support for notes fields (Unicode)
 - Currency: always display in ₹ with Indian number formatting (lakhs/crores)
@@ -570,13 +570,13 @@ All of the above plus:
 
 ---
 
-## 13. Open Questions (To Confirm With Father)
+## 13. Open Questions (To Confirm With owner)
 
-- [ ] What does Father consider the primary signal for buyer seriousness if not payment timeline?
+- [ ] What does owner consider the primary signal for buyer seriousness if not payment timeline?
 - [ ] Are there property types beyond floor/office/rootFloor/fullBuilding/plot?
 - [ ] Is commission ever charged to both buyer AND seller in the same deal?
 - [ ] How are holding costs tracked currently for co-investments — receipts, rough estimate?
-- [ ] Does Father want to track individual interactions (call log) or just the latest note?
+- [ ] Does owner want to track individual interactions (call log) or just the latest note?
 
 ---
 

@@ -62,11 +62,6 @@ const DealSchema = new mongoose.Schema({
   totalPaid:       { type: Number, default: 0 },
   remainingAmount: { type: Number },
 
-  // Agent splits
-  buyerAgentId:         { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
-  sellerAgentId:        { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
-  commissionSplitPercent: { type: Number },
-
   // Risk
   riskLevel: { type: String, enum: ['low','medium','high'], default: 'low' },
   riskNotes: { type: String, trim: true },

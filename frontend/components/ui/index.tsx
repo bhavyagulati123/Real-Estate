@@ -5,10 +5,11 @@ import { cn } from '@/lib/cn'
 import { motion, AnimatePresence } from 'framer-motion'
 import { overlayVariants, sheetVariants } from '@/lib/motion'
 import { X } from 'lucide-react'
+import { forwardRef } from 'react'
 
 // ─── AVATAR ───────────────────────────────────────────────────────────────────
-export function Avatar({ name, size = 'md' }: { name: string; size?: 'sm' | 'md' | 'lg' }) {
-  const initials = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+export function Avatar({ name, size = 'md' }: { name?: string | null; size?: 'sm' | 'md' | 'lg' }) {
+  const initials = (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
   const sizes = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base' }
   return (
     <div className={cn(sizes[size], 'rounded-full bg-blue-50 flex items-center justify-center font-medium text-blue-700 flex-shrink-0 select-none')}>
@@ -56,60 +57,61 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 // ─── INPUT ────────────────────────────────────────────────────────────────────
-export function Input({
-  className,
-  error,
-  ...props
-}: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
-  return (
-    <input
-      className={cn(
-        'w-full h-10 rounded-lg border bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none',
-        'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
-        error ? 'border-zinc-900 ring-1 ring-zinc-900' : 'border-zinc-300',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+export const Input = forwardRef<HTMLInputElement, React.ComponentPropsWithoutRef<'input'> & { error?: boolean }>(
+  function Input({ className, error, ...props }, ref) {
+    return (
+      <input
+        ref={ref}
+        className={cn(
+          'w-full h-10 rounded-lg border bg-white px-3 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none',
+          'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
+          error ? 'border-zinc-900 ring-1 ring-zinc-900' : 'border-zinc-300',
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = 'Input'
 
 // ─── TEXTAREA ─────────────────────────────────────────────────────────────────
-export function Textarea({
-  className,
-  ...props
-}: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      className={cn(
-        'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none resize-none',
-        'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
-        className
-      )}
-      {...props}
-    />
-  )
-}
+export const Textarea = forwardRef<HTMLTextAreaElement, React.ComponentPropsWithoutRef<'textarea'>>(
+  function Textarea({ className, ...props }, ref) {
+    return (
+      <textarea
+        ref={ref}
+        className={cn(
+          'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none resize-none',
+          'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+)
+Textarea.displayName = 'Textarea'
 
 // ─── SELECT ───────────────────────────────────────────────────────────────────
-export function Select({
-  className,
-  children,
-  ...props
-}: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return (
-    <select
-      className={cn(
-        'w-full h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none',
-        'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
-        className
-      )}
-      {...props}
-    >
-      {children}
-    </select>
-  )
-}
+export const Select = forwardRef<HTMLSelectElement, React.ComponentPropsWithoutRef<'select'>>(
+  function Select({ className, children, ...props }, ref) {
+    return (
+      <select
+        ref={ref}
+        className={cn(
+          'w-full h-10 rounded-lg border border-zinc-300 bg-white px-3 text-sm text-zinc-900 outline-none',
+          'focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1 transition-shadow duration-150',
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </select>
+    )
+  }
+)
+Select.displayName = 'Select'
 
 // ─── LABEL ────────────────────────────────────────────────────────────────────
 export function Label({ children, className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {

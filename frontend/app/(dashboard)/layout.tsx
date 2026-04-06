@@ -3,7 +3,7 @@ import { usePathname } from 'next/navigation'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar, MobileNav } from '@/components/Navigation'
 import { Sheet } from '@/components/ui'
-import { AddLeadForm, AddPropertyForm, AddDealForm, AddAgentForm, AddPaymentForm } from '@/components/forms'
+import { AddLeadForm, AddPropertyForm, AddDealForm, AddPaymentForm } from '@/components/forms'
 import { useUIStore } from '@/store/useUIStore'
 import { pageVariants } from '@/lib/motion'
 
@@ -15,7 +15,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     addPropertyOpen, closeAddProperty,
     editPropertyId,  closeEditProperty,
     addDealOpen,     closeAddDeal,
-    addAgentOpen,    closeAddAgent,
     addPaymentDealId,closeAddPayment,
   } = useUIStore()
 
@@ -49,10 +48,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       <Sheet open={addDealOpen} onClose={closeAddDeal} title="Create deal">
         <AddDealForm onClose={closeAddDeal} />
-      </Sheet>
-
-      <Sheet open={addAgentOpen} onClose={closeAddAgent} title="Add agent">
-        <AddAgentForm onClose={closeAddAgent} />
       </Sheet>
 
       {addPaymentDealId && (

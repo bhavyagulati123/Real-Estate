@@ -141,7 +141,9 @@ export default function LeadDetailPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-zinc-200 p-4 mb-4">
-        <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">Reschedule follow-up</p>
+        <label htmlFor="lead_followUpDate" className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2 block">
+          Reschedule follow-up
+        </label>
         <div className="flex gap-1.5 flex-wrap mb-2">
           {FOLLOWUP_PRESETS.map(p => (
             <button
@@ -159,9 +161,12 @@ export default function LeadDetailPage() {
           ))}
         </div>
         <input
+          id="lead_followUpDate"
+          name="lead_followUpDate"
           type="date"
           value={followUpDate}
           onChange={e => { setFollowUpDate(e.target.value); setActivePreset(null) }}
+          autoComplete="off"
           className="w-full h-9 rounded-lg border border-zinc-300 px-3 text-sm text-zinc-900 outline-none focus:ring-2 focus:ring-zinc-900 focus:ring-offset-1"
         />
 
@@ -188,11 +193,16 @@ export default function LeadDetailPage() {
         </div>
 
         <div className="mt-4">
-          <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">Add note</p>
+          <label htmlFor="lead_note" className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2 block">
+            Add note
+          </label>
           <Textarea
+            id="lead_note"
+            name="lead_note"
             value={note}
             onChange={e => setNote(e.target.value)}
             placeholder="What happened on this call? What to discuss next time..."
+            autoComplete="off"
             rows={3}
           />
         </div>

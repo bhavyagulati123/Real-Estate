@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, AlertTriangle, DollarSign, Flag, CheckCircle2 } from 'lucide-react'
 import { useAdvanceDealStage, useCloseDeal, useDeal, useLostDeal } from '@/hooks/useData'
 import { Avatar, Button, EmptyState, Skeleton, StatusBadge, Textarea, Input } from '@/components/ui'
-import { formatDate, formatRupees, DEAL_STAGES } from '@/lib/utils'
+import { formatDate, formatRupees } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
 import { useToast } from '@/components/ToastProvider'
 
@@ -22,6 +22,7 @@ export default function DealDetailPage() {
   const advanceStage = useAdvanceDealStage(id)
 
   const [closeDate, setCloseDate] = useState(() => new Date().toISOString().split('T')[0])
+  const [commissionAmt, setCommissionAmt] = useState('')
   const [lostReason, setLostReason] = useState('')
   const [stageNotes, setStageNotes] = useState('')
 
@@ -46,8 +47,11 @@ export default function DealDetailPage() {
 
   async function handleClose() {
     try {
-      await closeDeal.mutateAsync({ closedDate: closeDate || undefined })
-      toast.success('Deal closed')
+      await closeDeal.mutateAsync({
+        closedDate: closeDate || undefined,
+        commissionAmount: commissionAmt ? Number(commissionAmt) : undefined,
+      })
+      toast.success(commissionAmt ? 'Deal closed and commission recorded' : 'Deal closed')
     } catch (e) {
       toast.error((e as Error).message || 'Something went wrong')
     }
@@ -82,11 +86,9 @@ export default function DealDetailPage() {
   }
 
   const isFinal = ['closed', 'lost'].includes(deal.stage)
-  const nextStage = (() => {
-    const idx = DEAL_STAGES.indexOf(deal.stage)
-    if (idx === -1) return null
-    return DEAL_STAGES[idx + 1] || null
-  })()
+  // 'closed' is reached only via the Mark-closed section below, not the Advance button
+  const ADVANCE_NEXT: Record<string, string> = { negotiation: 'bayana', bayana: 'papers' }
+  const nextStage = ADVANCE_NEXT[deal.stage] ?? null
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8 max-w-3xl">
@@ -186,7 +188,8 @@ export default function DealDetailPage() {
           <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">
             Advance stage ({deal.stage} → {nextStage})
           </p>
-          <Textarea value={stageNotes} onChange={(e) => setStageNotes(e.target.value)} rows={2} placeholder="Optional notes..." />
+          <label htmlFor="deal_stageNotes" className="sr-only">Stage notes</label>
+          <Textarea id="deal_stageNotes" name="deal_stageNotes" autoComplete="off" value={stageNotes} onChange={(e) => setStageNotes(e.target.value)} rows={2} placeholder="Optional notes..." />
           <div className="flex gap-2 pt-3">
             <Button onClick={() => handleAdvance(nextStage)} loading={advanceStage.isPending} className="flex-1">
               Advance to {nextStage}
@@ -252,8 +255,23 @@ export default function DealDetailPage() {
             <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-3">Close deal</p>
             <div className="space-y-3">
               <div>
-                <p className="text-xs text-zinc-500 mb-1">Closed date</p>
-                <Input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
+                <label htmlFor="deal_closeDate" className="text-xs text-zinc-500 mb-1 block">Closed date</label>
+                <Input id="deal_closeDate" name="deal_closeDate" autoComplete="off" type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="deal_commissionAmt" className="text-xs text-zinc-500 mb-1 block">
+                  Commission received (₹)
+                  {deal.expectedCommission ? <span className="text-zinc-400"> · expected {formatRupees(deal.expectedCommission)}</span> : ''}
+                </label>
+                <Input
+                  id="deal_commissionAmt"
+                  name="deal_commissionAmt"
+                  autoComplete="off"
+                  type="number"
+                  placeholder="0 — leave blank if not yet received"
+                  value={commissionAmt}
+                  onChange={(e) => setCommissionAmt(e.target.value)}
+                />
               </div>
               <Button onClick={handleClose} loading={closeDeal.isPending} className="w-full">
                 <CheckCircle2 className="w-4 h-4" /> Mark closed
@@ -263,7 +281,8 @@ export default function DealDetailPage() {
 
           <div className="bg-white rounded-xl border border-zinc-200 p-4">
             <p className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-3">Mark lost</p>
-            <Textarea value={lostReason} onChange={(e) => setLostReason(e.target.value)} rows={2} placeholder="Why did this deal fail?" />
+            <label htmlFor="deal_lostReason" className="sr-only">Lost reason</label>
+            <Textarea id="deal_lostReason" name="deal_lostReason" autoComplete="off" value={lostReason} onChange={(e) => setLostReason(e.target.value)} rows={2} placeholder="Why did this deal fail?" />
             <div className="pt-3">
               <Button variant="secondary" onClick={handleLost} loading={lostDeal.isPending} className="w-full">
                 <Flag className="w-4 h-4" /> Mark lost
@@ -280,4 +299,3 @@ export default function DealDetailPage() {
     </div>
   )
 }
-

@@ -44,7 +44,7 @@ router.get('/', auth, async (req, res) => {
 
     const total = await Lead.countDocuments(filter)
     const leads = await paginate(
-      Lead.find(filter).sort({ followUpDate: 1, createdAt: -1 }).populate('sourceAgentId', 'name phone'),
+      Lead.find(filter).sort({ followUpDate: 1, createdAt: -1 }),
       Number(page), Number(limit)
     )
 
@@ -91,8 +91,7 @@ router.post('/', auth, async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const lead = await Lead.findOne({ _id: req.params.id, isDeleted: false })
-      .populate('sourceAgentId', 'name phone type')
-    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found', code: 404 })
+          if (!lead) return res.status(404).json({ success: false, error: 'Lead not found', code: 404 })
     res.json({ success: true, data: lead })
   } catch (err) {
     res.status(500).json({ success: false, error: err.message, code: 500 })
@@ -133,8 +132,7 @@ router.put('/:id', auth, async (req, res) => {
       { _id: req.params.id, isDeleted: false },
       { ...req.body, updatedAt: new Date() },
       { new: true, runValidators: true }
-    ).populate('sourceAgentId', 'name phone')
-
+    )
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found', code: 404 })
     res.json({ success: true, data: lead, message: 'Lead updated' })
   } catch (err) {

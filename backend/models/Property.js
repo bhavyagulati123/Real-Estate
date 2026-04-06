@@ -23,7 +23,7 @@ const PropertySchema = new mongoose.Schema({
   // Three price fields — all serve different purposes
   floorPrice:   { type: Number }, // seller's actual minimum — PRIVATE
   askingPrice:  { type: Number }, // seller's public ask
-  listedPrice:  { type: Number }, // what Father shows buyers (inflated in Type B deals)
+  listedPrice:  { type: Number }, // what owner shows buyers (inflated in Type B deals)
 
   dealType: {
     type: String,
@@ -38,7 +38,6 @@ const PropertySchema = new mongoose.Schema({
   },
 
   sellerId:      { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },
-  sourceAgentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Agent' },
 
   images:    [{ type: String }],
   documents: [{ type: String }],

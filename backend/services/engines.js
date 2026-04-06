@@ -33,7 +33,6 @@ async function findMatchingBuyers(property) {
   return Lead.find(query)
     .sort({ credibilityScore: -1 }) // highest credibility first
     .limit(10)
-    .populate('sourceAgentId', 'name phone')
 }
 
 // ─── FOLLOW-UP ENGINE ─────────────────────────────────────────────────────────
@@ -53,16 +52,14 @@ async function getFollowUpGroups() {
 
   const [overdue, dueToday, upcoming] = await Promise.all([
     Lead.find({ ...baseQuery, followUpDate: { $lt: todayStart } })
-      .sort({ followUpDate: 1 })
-      .populate('sourceAgentId', 'name'),
+      .sort({ followUpDate: 1 }),
 
     Lead.find({ ...baseQuery, followUpDate: { $gte: todayStart, $lte: todayEnd } })
-      .sort({ followUpDate: 1 })
-      .populate('sourceAgentId', 'name'),
+      .sort({ followUpDate: 1 }),
 
     Lead.find({ ...baseQuery, followUpDate: { $gt: todayEnd, $lte: twoDaysOut } })
-      .sort({ followUpDate: 1 })
-      .populate('sourceAgentId', 'name'),
+      .sort({ followUpDate: 1 }),
+
   ])
 
   return { overdue, dueToday, upcoming }

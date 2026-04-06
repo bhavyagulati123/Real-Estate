@@ -52,7 +52,16 @@ router.post('/', auth, async (req, res) => {
       })
     }
 
-    const investment = await Investment.create(req.body)
+    // Auto-calculate amountInvested for co-investors if not provided
+    const body = { ...req.body }
+    if (Array.isArray(body.coInvestors)) {
+      body.coInvestors = body.coInvestors.map(c => ({
+        ...c,
+        amountInvested: c.amountInvested || Math.round(body.purchasePrice * c.sharePercent / 100),
+      }))
+    }
+
+    const investment = await Investment.create(body)
     // Mark property as owner-owned
     await Property.findByIdAndUpdate(propertyId, { ownershipStatus: 'ownerOwned' })
 

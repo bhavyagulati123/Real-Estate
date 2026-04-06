@@ -10,7 +10,5 @@ export const queryKeys = {
   deal:            (id: string)                  => ['deals', id]   as const,
   investments:     (f?: Record<string, unknown>) => ['investments', f] as const,
   investment:      (id: string)                  => ['investments', id] as const,
-  agents:          ['agents'] as const,
-  agent:           (id: string)                  => ['agents', id]  as const,
   wealth:          (f?: Record<string, unknown>) => ['wealth', f]   as const,
 }
