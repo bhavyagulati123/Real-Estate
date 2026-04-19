@@ -103,6 +103,8 @@ router.put('/:id', auth, async (req, res) => {
 router.delete('/:id', auth, async (req, res) => {
   try {
     const Deal = require('../models/Deal')
+    const { Investment, WealthEntry } = require('../models/index')
+
     const activeDeal = await Deal.findOne({
       propertyId: req.params.id,
       stage: { $nin: ['closed', 'lost'] },
@@ -115,6 +117,21 @@ router.delete('/:id', auth, async (req, res) => {
         code: 400,
       })
     }
+
+    // Cascade: remove any investment linked to this property
+    const investment = await Investment.findOne({ propertyId: req.params.id })
+    if (investment) {
+      // If it was sold, remove the auto-created WealthEntry for investment profit
+      if (investment.status === 'sold' && investment.saleDate) {
+        await WealthEntry.deleteOne({
+          category: 'investmentProfit',
+          date: investment.saleDate,
+          amount: investment.myProfit,
+        })
+      }
+      await Investment.deleteOne({ _id: investment._id })
+    }
+
     await Property.findOneAndUpdate({ _id: req.params.id }, { isDeleted: true, deletedAt: new Date() })
     res.json({ success: true, message: 'Property deleted' })
   } catch (err) {

@@ -136,6 +136,14 @@ export function useEditProperty(id: string) {
   })
 }
 
+export function useDeleteProperty() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete<ApiRes<null>>(`/api/properties/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['properties'] }),
+  })
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // DEALS
 // ═══════════════════════════════════════════════════════════════════════════════

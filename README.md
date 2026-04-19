@@ -14,14 +14,14 @@ Real Estate/
 │   ├── middleware/
 │   │   └── auth.js        JWT cookie verification
 │   ├── models/
-│   │   ├── index.js       All Mongoose schemas (User, Investment, Agent, WealthEntry)
+│   │   ├── index.js       Mongoose schemas (User, Investment, WealthEntry)
 │   │   ├── Lead.js
 │   │   ├── Property.js
 │   │   └── Deal.js
 │   ├── routes/            One file per resource
 │   ├── services/
-│   │   └── engines.js     Matching + commission calculation logic
-│   ├── seed.js            Seeds demo data + login accounts
+│   │   └── engines.js     Buyer matching + follow-up aggregation logic
+│   ├── seed.js            Seeds login accounts
 │   └── index.js           Express app entry point
 ├── frontend/              Next.js 14 App Router
 │   ├── app/
@@ -41,13 +41,13 @@ Real Estate/
 │   │   └── page.tsx               Root redirect → /dashboard
 │   ├── components/
 │   │   ├── ui/index.tsx   Design system (Button, Input, Sheet, KpiCard, Skeleton …)
-│   │   ├── forms/         All create/edit forms (Lead, Property, Deal, Payment, Agent, Investment)
+│   │   ├── forms/         All create/edit forms (Lead, Property, Deal, Payment, Investment)
 │   │   ├── Navigation.tsx Sidebar + MobileNav
 │   │   ├── LeadCard.tsx
 │   │   ├── LeadListItem.tsx
 │   │   └── ToastProvider.tsx
 │   ├── hooks/
-│   │   ├── useData.ts     All TanStack Query hooks (properties, deals, investments, agents, dashboard)
+│   │   ├── useData.ts     All TanStack Query hooks (properties, deals, investments, dashboard)
 │   │   └── useLeads.ts    Lead-specific queries + mutations
 │   ├── store/
 │   │   ├── useAuthStore.ts  Zustand — user session
@@ -55,7 +55,7 @@ Real Estate/
 │   ├── lib/
 │   │   ├── api.ts         Fetch wrapper (credentials: include, 401 → redirect to /login)
 │   │   ├── queryKeys.ts   Centralised TanStack Query key factory
-│   │   ├── utils.ts       formatRupees, formatDate, LEAD_STATUSES, DEAL_STAGES …
+│   │   ├── utils.ts       formatRupees, formatDate, LEAD_STATUSES …
 │   │   ├── motion.ts      Framer Motion variants
 │   │   └── cn.ts          clsx helper
 │   └── middleware.ts      Route protection (reads sk_token cookie)
@@ -91,7 +91,7 @@ docker compose up mongodb -d
 cd backend
 cp .env.example .env          # fill in secrets (see below)
 npm install
-node seed.js                  # optional — loads demo data
+node seed.js                  # optional — creates login accounts
 npm run dev                   # http://localhost:5000
 ```
 
@@ -105,10 +105,10 @@ npm run dev                   # http://localhost:3000
 
 **Seed login accounts:**
 
-| Role     | Phone          | Password   |
-|----------|----------------|------------|
-| Admin    | +919999999999  | admin123   |
-| Operator | +919999999998  | owner123  |
+| Role     | Phone           | Password  |
+|----------|-----------------|-----------|
+| Admin    | +919311796190   | admin123  |
+| Operator | +919311796191   | admin123  |
 
 ---
 
@@ -181,11 +181,13 @@ Business snapshot:
 - **Overdue follow-ups** (red banner) — leads whose `followUpDate` is in the past
 - **Due today** — leads scheduled for today
 - **Active deals** — deals not yet closed or lost
-- **Upcoming follow-ups** — next 7 days
+- **Upcoming follow-ups** — next 2 days
 
 ### `/leads` + `/leads/[id]`
 
 **List:** Search by name/phone, filter by type (buyer/seller), status, block, overdue-only toggle. Shows follow-up status colour coding.
+
+Leads are always buyers by default. Seller leads are created automatically when adding a property with a new seller.
 
 **Detail:**
 - Profile card — name, phone (tap to call), WhatsApp quick link, current status badge, overdue/today alert
@@ -194,8 +196,6 @@ Business snapshot:
 - **Add note** — free-text note attached to this interaction
 - **Interaction history** — full timeline of every note + stage change
 - **Related deals** — all deals where this lead is buyer or seller
-
-Saving (one button) commits follow-up date + stage + note in a single `PATCH /api/leads/:id` call.
 
 ### `/properties` + `/properties/[id]`
 
@@ -207,6 +207,10 @@ Saving (one button) commits follow-up date + stage + note in a single `PATCH /ap
 - **Seller card** — linked seller lead with call + WhatsApp actions and "View lead" link
 - **Matched buyers** — auto-matched leads whose budget is within ±20% of the asking price and whose location overlaps. One-click "Deal" opens the create-deal sheet pre-filled with this property + buyer.
 - **Deal activity** — all deals for this property
+- **Change status** — pill buttons to switch `ownershipStatus` between Available / Under Negotiation / Owner Owned / Sold (e.g. when a sold property comes back on the market)
+- **Delete property** — soft delete with inline confirmation; blocked by backend if active deals exist
+
+**Add property form:** Includes inline seller — choose an existing person from leads or create a new seller on the spot (name + phone required). New sellers are automatically saved as `leadType: seller`.
 
 ### `/deals` + `/deals/[id]`
 
@@ -215,10 +219,10 @@ Saving (one button) commits follow-up date + stage + note in a single `PATCH /ap
 **Detail:**
 - Payment progress bar (paid vs remaining amount)
 - Buyer + seller party cards with navigation to their lead profiles
-- **Advance stage** — with optional notes textarea; moves through `negotiation → bayana → papers`
+- **Advance stage** — moves through `negotiation → bayana → papers` only; closing is a separate action
 - **Payment history** — all recorded payments (token, bayana, full payment, commission) with paidBy / receivedBy / verified status
 - **Stage history** — full audit trail of when each stage was entered and any notes
-- **Close deal** — records closed date, finalises commission
+- **Close deal** — records closed date + commission received; commission amount auto-creates a `WealthEntry` of category `commission`
 - **Mark lost** — requires a reason; freezes the deal
 
 ### `/investments` + `/investments/[id]`
@@ -227,18 +231,27 @@ Saving (one button) commits follow-up date + stage + note in a single `PATCH /ap
 
 **Detail:**
 - Investment breakdown — purchase price, my share %, holding costs, target sale price, days holding
-- Co-investor table — name, phone, amount invested, share %
+- Co-investor table — name, phone, share %; amounts are auto-calculated (`purchasePrice × sharePercent / 100`)
 - **Mark sold flow:**
   1. Click "Mark sold"
-  2. Enter actual sale price → profit previews live (shows green/red P&L before confirming)
+  2. Enter actual sale price → live P&L preview (my share %, less investment, less holding costs, net profit)
   3. Confirm → backend calculates `myProfit`, creates a `WealthEntry` of category `investmentProfit`, marks the property as `sold`
 
 ### `/wealth`
-Income and expense ledger. Entries are created automatically by deal commissions and investment sales. Manual entries can also be added.
+Income and expense ledger. Entries are created automatically on deal commission close and investment sale. Manual entries can also be added.
 
 ### `/settings`
 - **Profile** — change display name or password (requires current password)
-- **Agents** — manage internal and external agents used in deals; grouped by type with inline edit
+
+---
+
+## Three Revenue Models
+
+| Model | How it works | Where tracked |
+|---|---|---|
+| **Brokerage** | You broker a deal between buyer and seller. Commission is your income. | Deal page — record commission on close; auto-creates WealthEntry |
+| **Inflated** | You buy a property and sell it at a higher price. Profit = sale − purchase. | Investment section (you own 100%, no co-investors) |
+| **Co-investment** | You co-own a property with partners. Profit is split by share %. | Investment section with co-investors; your share % drives all calculations |
 
 ---
 
@@ -261,7 +274,7 @@ All endpoints except `/api/auth/login`, `/api/auth/logout`, `/api/auth/refresh` 
 | Method | Path    | Query params                                          |
 |--------|---------|-------------------------------------------------------|
 | GET    | `/`     | `leadType`, `status`, `block`, `search`, `overdueOnly`, `page`, `limit` |
-| POST   | `/`     | Create lead                                           |
+| POST   | `/`     | Create lead (`leadType` defaults to `buyer`)          |
 | GET    | `/:id`  | Full lead with `interactionHistory`                   |
 | PATCH  | `/:id`  | Update `followUpDate`, `status`, append `note`        |
 | PUT    | `/:id`  | Full edit                                             |
@@ -273,41 +286,33 @@ All endpoints except `/api/auth/login`, `/api/auth/logout`, `/api/auth/refresh` 
 |--------|----------------|------------------------------------------------|
 | GET    | `/`            | List; filters: `ownershipStatus`, `dealType`, `block`, `search` |
 | POST   | `/`            | Create                                         |
-| GET    | `/:id`         | Full property                                  |
-| PUT    | `/:id`         | Edit                                           |
+| GET    | `/:id`         | Full property (populates `sellerId`)           |
+| PUT    | `/:id`         | Edit (including `ownershipStatus` change)      |
+| DELETE | `/:id`         | Delete (blocked if active deals exist)         |
 | GET    | `/:id/matches` | Buyer leads matched by budget + location       |
 
 ### Deals `/api/deals`
 
-| Method | Path               | Description                             |
-|--------|--------------------|-----------------------------------------|
-| GET    | `/`                | List; filter by `stage`                 |
-| POST   | `/`                | Create deal                             |
-| GET    | `/:id`             | Full deal with payments + stage history |
-| POST   | `/:id/payments`    | Record payment                          |
-| PUT    | `/:id/stage`       | Advance stage (with optional notes)     |
-| PUT    | `/:id/close`       | Mark closed                             |
-| PUT    | `/:id/lost`        | Mark lost (requires `lostReason`)       |
+| Method | Path               | Description                                                        |
+|--------|--------------------|--------------------------------------------------------------------|
+| GET    | `/`                | List; filter by `stage`                                            |
+| POST   | `/`                | Create deal                                                        |
+| GET    | `/:id`             | Full deal with payments + stage history                            |
+| POST   | `/:id/payments`    | Record payment                                                     |
+| PUT    | `/:id/stage`       | Advance stage (`negotiation → bayana → papers`); rejects `closed` |
+| PUT    | `/:id/close`       | Mark closed; accepts `commissionAmount`; auto-creates WealthEntry  |
+| PUT    | `/:id/lost`        | Mark lost (requires `lostReason`)                                  |
 
 ### Investments `/api/investments`
 
 | Method | Path        | Description                                              |
 |--------|-------------|----------------------------------------------------------|
 | GET    | `/`         | List; filter by `status` (holding/sold)                  |
-| POST   | `/`         | Record investment; marks property `ownerOwned`           |
+| POST   | `/`         | Record investment; marks property `ownerOwned`; auto-calculates co-investor amounts |
 | GET    | `/:id`      | Full investment with co-investors                        |
 | PUT    | `/:id`      | Edit                                                     |
 | DELETE | `/:id`      | Delete investment                                        |
 | PUT    | `/:id/sell` | Mark sold; calculates profit; creates WealthEntry; marks property `sold` |
-
-### Agents `/api/agents`
-
-| Method | Path   | Description        |
-|--------|--------|--------------------|
-| GET    | `/`    | List; filter `type`|
-| POST   | `/`    | Create             |
-| GET    | `/:id` | Get agent          |
-| PUT    | `/:id` | Edit               |
 
 ### Wealth `/api/wealth`
 
@@ -328,14 +333,17 @@ All endpoints except `/api/auth/login`, `/api/auth/logout`, `/api/auth/refresh` 
 
 | Rule | Detail |
 |------|--------|
+| Leads are buyers by default | `leadType` defaults to `buyer` on creation. Seller leads are auto-created when a property is added with a new seller. |
 | Floor price locked | Set at deal creation, never updated |
 | Agreed price locked after bayana | Cannot change once bayana stage is reached |
-| Commission auto-creates wealth | A payment of type `commission` with `verified: true` automatically creates a `WealthEntry` |
-| Agent commission split on close | `commissionSplitPercent` = buyer agent's %. buyerAgent gets that %, sellerAgent gets the rest. If unset, all goes to buyerAgent. Both agents' `totalDeals` and `totalCommission` are incremented. |
-| Investment sell auto-creates wealth | Marking sold creates `investmentProfit` WealthEntry |
+| Advance stage blocked at closed | `PUT /:id/stage` rejects `stage: 'closed'`; use `PUT /:id/close` instead |
+| Commission auto-creates wealth | `PUT /:id/close` with `commissionAmount > 0` creates a verified `WealthEntry` of category `commission` |
+| Investment sell auto-creates wealth | Marking sold creates `investmentProfit` WealthEntry for `myProfit` only |
 | Investment sell marks property sold | `ownershipStatus` on the property is set to `sold` |
-| Profit formula | `gross = salePrice × (myShare%)` · `profit = gross − myAmount − holdingCosts×(myShare%)` |
+| Co-investor amounts auto-calculated | `amountInvested = purchasePrice × sharePercent / 100`; no manual entry needed |
+| Profit formula | `gross = salePrice × (myShare%)` · `profit = gross − myAmount − holdingCosts × (myShare%)` |
 | Buyer matching | Budget within ±20% of asking price AND location/block overlap |
+| Property status is editable | Any status (`available`, `underNegotiation`, `ownerOwned`, `sold`) can be changed manually from the property detail page |
 | Follow-up colours | Red = overdue, Amber = due today, no colour = future |
 
 ---
@@ -360,6 +368,5 @@ All endpoints except `/api/auth/login`, `/api/auth/logout`, `/api/auth/refresh` 
 |------------|-------------------------------------------|
 | `admin`    | Full access to all data                   |
 | `operator` | Same as admin (intended for office staff) |
-| `agent`    | Linked to an Agent record; limited access |
 
 Role-based route guards (`requireRole()` middleware) are available in `backend/middleware/auth.js` and can be applied to any route.

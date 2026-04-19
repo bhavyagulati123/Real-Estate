@@ -1,16 +1,48 @@
 'use client'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Phone, MessageCircle, Plus, Pencil } from 'lucide-react'
-import { useDeals, useProperty, usePropertyMatches } from '@/hooks/useData'
+import { ArrowLeft, Phone, MessageCircle, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useDeals, useProperty, usePropertyMatches, useEditProperty, useDeleteProperty } from '@/hooks/useData'
 import { Avatar, Button, EmptyState, Skeleton, StatusBadge } from '@/components/ui'
 import { formatRupees } from '@/lib/utils'
 import { useUIStore } from '@/store/useUIStore'
+import { useToast } from '@/components/ToastProvider'
+
+const STATUS_OPTIONS = [
+  { value: 'available',        label: 'Available' },
+  { value: 'underNegotiation', label: 'Under Negotiation' },
+  { value: 'ownerOwned',       label: 'Owner Owned' },
+  { value: 'sold',             label: 'Sold' },
+]
 
 export default function PropertyDetailPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
+  const toast  = useToast()
   const { openAddDeal, openEditProperty } = useUIStore()
+  const editProp   = useEditProperty(id)
+  const deleteProp = useDeleteProperty()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  async function handleStatusChange(status: string) {
+    try {
+      await editProp.mutateAsync({ ownershipStatus: status } as any)
+      toast.success('Status updated')
+    } catch {
+      toast.error('Failed to update status')
+    }
+  }
+
+  async function handleDelete() {
+    try {
+      await deleteProp.mutateAsync(id)
+      toast.success('Property deleted')
+      router.push('/properties')
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete property')
+      setConfirmDelete(false)
+    }
+  }
 
   const { data, isLoading, error } = useProperty(id)
   const prop = data?.data as any
@@ -80,7 +112,7 @@ export default function PropertyDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
             <Button variant="secondary" onClick={() => openEditProperty(prop._id)}>
               <Pencil className="w-4 h-4" /> Edit
             </Button>
@@ -89,7 +121,50 @@ export default function PropertyDetailPage() {
             </Button>
           </div>
         </div>
+
+        {/* Status change */}
+        <div className="mt-4 pt-4 border-t border-zinc-100 flex items-center gap-3 flex-wrap">
+          <p className="text-xs text-zinc-400 shrink-0">Change status:</p>
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                disabled={prop.ownershipStatus === opt.value || editProp.isPending}
+                onClick={() => handleStatusChange(opt.value)}
+                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+                  prop.ownershipStatus === opt.value
+                    ? 'bg-zinc-900 text-white border-zinc-900 cursor-default'
+                    : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400 hover:text-zinc-900'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
+
+      {/* Delete */}
+      {!confirmDelete ? (
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-red-500 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Delete property
+          </button>
+        </div>
+      ) : (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-red-700">Delete this property permanently?</p>
+          <div className="flex gap-2 shrink-0">
+            <Button variant="secondary" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            <Button onClick={handleDelete} loading={deleteProp.isPending} className="bg-red-600 hover:bg-red-700 text-white border-0">
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
 
       {prop.sellerId && (
         <div className="bg-white rounded-xl border border-zinc-200 p-4 mb-4">
